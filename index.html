@@ -2,8 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Aaron's Agenda — Command Center</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Aaron's Agenda">
 <style>
   :root{
     --black:#0a0a0a;
@@ -122,6 +128,16 @@
     margin:0 auto;
     padding:26px 28px 80px;
   }
+  @media(max-width:640px){
+    main{padding:16px 14px 60px;}
+    header{padding:14px 16px;}
+    .brand .mark{font-size:19px;letter-spacing:1.5px;}
+    .brand .sub{font-size:10px;letter-spacing:1px;}
+    nav.tabs{padding:0 10px;}
+    nav.tabs button{padding:12px 12px;font-size:12px;}
+    .panel{padding:14px;}
+    .modal-body{padding:14px;}
+  }
   .view{display:none;}
   .view.active{display:block;}
 
@@ -157,7 +173,11 @@
   .grid.cols-3{grid-template-columns:repeat(3,1fr);}
   .grid.cols-4{grid-template-columns:repeat(4,1fr);}
   @media(max-width:900px){
-    .grid.cols-2, .grid.cols-3, .grid.cols-4{grid-template-columns:1fr;}
+    .grid.cols-2, .grid.cols-3{grid-template-columns:1fr;}
+    .grid.cols-4{grid-template-columns:1fr 1fr;}
+  }
+  @media(max-width:520px){
+    .grid.cols-4{grid-template-columns:1fr;}
   }
 
   .stat-card{
@@ -201,14 +221,14 @@
     margin-bottom:4px;
     margin-top:10px;
   }
-  input[type=text], input[type=date], input[type=time], input[type=email], input[type=tel], select, textarea{
+  input[type=text], input[type=date], input[type=time], input[type=email], input[type=tel], input[type=password], select, textarea{
     width:100%;
     background:var(--input-bg);
     border:1px solid var(--input-border);
     border-radius:4px;
-    padding:9px 10px;
+    padding:10px 10px;
     font-family:inherit;
-    font-size:13.5px;
+    font-size:16px;
     color:var(--ink);
   }
   textarea{resize:vertical;min-height:60px;}
@@ -247,6 +267,10 @@
 
   /* ===== Tables / Lists ===== */
   table{width:100%;border-collapse:collapse;font-size:13px;}
+  @media(max-width:640px){
+    table{min-width:560px;}
+  }
+
   th{
     text-align:left;
     font-size:11px;
@@ -345,6 +369,14 @@
     flex-direction:column;
   }
   .glance.active{display:flex;}
+  @media(max-width:640px){
+    .glance{
+      top:auto !important; left:0 !important; right:0 !important; bottom:0;
+      width:100%; max-width:100%; max-height:60vh;
+      border-radius:12px 12px 0 0; border-width:2px 0 0 0;
+    }
+    .glance-head{cursor:default;}
+  }
   .glance-head{
     background:var(--black);
     color:var(--gold);
@@ -390,6 +422,10 @@
     background:#f7dede;color:#7a1f1f;border:1px solid #7a1f1f;
     border-radius:4px;padding:8px 10px;font-size:12px;margin-bottom:10px;
   }
+  @media(max-width:480px){
+    .login-wrap{padding:12px;}
+    .login-card{padding:24px 20px;}
+  }
 </style>
 
 <body>
@@ -427,9 +463,15 @@
   <div class="header-controls">
     <span class="agenda-pill" id="agendaCount">0 agenda-forward items</span>
     <span class="agenda-pill" id="userBadge">—</span>
+    <button id="installBtn" onclick="triggerInstall()" style="display:none;">Install App</button>
     <button onclick="doSignOut()">Sign Out</button>
   </div>
 </header>
+
+<div id="iosInstallBanner" style="display:none;background:#151515;color:var(--gold);border-bottom:1px solid var(--gold);padding:10px 16px;font-size:12px;text-align:center;">
+  Add this to your Home Screen: tap <strong>Share</strong> ⬆ then <strong>"Add to Home Screen"</strong>.
+  <button onclick="document.getElementById('iosInstallBanner').style.display='none'" style="background:none;border:none;color:var(--gold);text-decoration:underline;margin-left:8px;cursor:pointer;">Dismiss</button>
+</div>
 
 <nav class="tabs" id="tabNav">
   <button data-view="dashboard" class="active" onclick="switchView('dashboard')">Dashboard</button>
@@ -519,7 +561,7 @@
         <div class="search-bar">
           <input type="text" id="contactSearch" placeholder="Search name, phone, occupation..." oninput="renderContacts()">
         </div>
-        <div style="max-height:520px;overflow-y:auto;">
+        <div style="max-height:520px;overflow-y:auto;overflow-x:auto;">
           <table>
             <thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Time Zone</th><th>Occupation</th><th id="ownerColHead" style="display:none;">Owner</th><th>Touch</th></tr></thead>
             <tbody id="contactsTableBody"></tbody>
@@ -572,7 +614,7 @@
       </div>
       <div class="panel">
         <h3 class="panel-title">All Appointments</h3>
-        <div style="max-height:560px;overflow-y:auto;">
+        <div style="max-height:560px;overflow-y:auto;overflow-x:auto;">
           <table>
             <thead><tr><th>Client</th><th>Date</th><th>Time</th><th>Type</th><th></th></tr></thead>
             <tbody id="apptTableBody"></tbody>
@@ -618,7 +660,7 @@
             <option>Text</option><option>LinkedIn</option><option>FB</option><option>IG</option><option>Email</option><option>Call</option>
           </select>
         </div>
-        <div style="max-height:520px;overflow-y:auto;" id="messagesList"></div>
+        <div style="max-height:520px;overflow-y:auto;overflow-x:auto;" id="messagesList"></div>
       </div>
     </div>
   </section>
@@ -663,7 +705,7 @@
             <option value="done">Completed</option>
           </select>
         </div>
-        <div style="max-height:520px;overflow-y:auto;" id="tasksList"></div>
+        <div style="max-height:520px;overflow-y:auto;overflow-x:auto;" id="tasksList"></div>
       </div>
     </div>
   </section>
@@ -1453,6 +1495,45 @@ function updateStat(){
 
 document.getElementById('contactOverlay').addEventListener('click', e=>{
   if(e.target.id==='contactOverlay') closeContactCard();
+});
+
+/* ============ PWA: INSTALL + SERVICE WORKER ============ */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{ /* fine if it fails, app still works */ });
+  });
+}
+
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  document.getElementById('installBtn').style.display = 'inline-block';
+});
+function triggerInstall(){
+  if(!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  deferredInstallPrompt.userChoice.then(()=>{
+    deferredInstallPrompt = null;
+    document.getElementById('installBtn').style.display = 'none';
+  });
+}
+window.addEventListener('appinstalled', ()=>{
+  document.getElementById('installBtn').style.display = 'none';
+});
+
+// iOS Safari has no beforeinstallprompt — show a manual instruction banner instead,
+// once, unless the app is already running installed (standalone) or already dismissed.
+(function iosInstallHint(){
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+  const dismissed = localStorage.getItem('iosInstallDismissed');
+  if(isIos && !isStandalone && !dismissed){
+    document.getElementById('iosInstallBanner').style.display = 'block';
+  }
+})();
+document.getElementById('iosInstallBanner').addEventListener('click', (e)=>{
+  if(e.target.tagName==='BUTTON'){ localStorage.setItem('iosInstallDismissed','1'); }
 });
 </script>
 
