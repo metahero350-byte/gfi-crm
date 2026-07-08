@@ -1,0 +1,1460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aaron's Agenda — Command Center</title>
+<style>
+  :root{
+    --black:#0a0a0a;
+    --black-2:#151515;
+    --gold:#c9a24b;
+    --gold-bright:#e6c876;
+    --white:#ffffff;
+    --ink:#000000;
+    --input-bg:#e9e9e9;
+    --input-border:#c7c7c7;
+    --danger:#7a1f1f;
+    --ok:#2f5d3a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:var(--black);
+    font-family:'Georgia','Times New Roman',serif;
+    color:var(--ink);
+    min-height:100vh;
+  }
+  ::selection{background:var(--gold);color:#000;}
+
+  /* ===== Header ===== */
+  header{
+    background:linear-gradient(180deg,#0a0a0a 0%,#161616 100%);
+    border-bottom:1px solid var(--gold);
+    padding:18px 28px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:12px;
+  }
+  .brand{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+  }
+  .brand .mark{
+    color:var(--gold);
+    font-size:26px;
+    letter-spacing:3px;
+    font-weight:700;
+    font-family:'Trajan Pro','Georgia',serif;
+    text-transform:uppercase;
+  }
+  .brand .sub{
+    color:#ccc;
+    font-size:12px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+  }
+  .header-controls{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    flex-wrap:wrap;
+  }
+  .agenda-pill{
+    border:1px solid var(--gold);
+    color:var(--gold);
+    padding:6px 14px;
+    border-radius:20px;
+    font-size:11px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    cursor:default;
+  }
+  select.user-select, .header-controls button{
+    background:var(--input-bg);
+    color:var(--ink);
+    border:1px solid var(--gold);
+    padding:8px 12px;
+    border-radius:4px;
+    font-family:inherit;
+    font-size:13px;
+    cursor:pointer;
+  }
+  .header-controls button{
+    background:var(--gold);
+    font-weight:bold;
+  }
+  .header-controls button:hover{background:var(--gold-bright);}
+
+  /* ===== Nav Tabs ===== */
+  nav.tabs{
+    background:var(--black-2);
+    display:flex;
+    padding:0 28px;
+    border-bottom:2px solid var(--gold);
+    overflow-x:auto;
+  }
+  nav.tabs button{
+    background:transparent;
+    border:none;
+    color:#bbb;
+    padding:14px 20px;
+    font-size:13px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    cursor:pointer;
+    border-bottom:3px solid transparent;
+    font-family:inherit;
+    white-space:nowrap;
+  }
+  nav.tabs button:hover{color:var(--gold-bright);}
+  nav.tabs button.active{
+    color:var(--gold);
+    border-bottom:3px solid var(--gold);
+    font-weight:bold;
+  }
+
+  main{
+    max-width:1300px;
+    margin:0 auto;
+    padding:26px 28px 80px;
+  }
+  .view{display:none;}
+  .view.active{display:block;}
+
+  h2.view-title{
+    color:var(--white);
+    font-size:22px;
+    letter-spacing:1px;
+    margin:0 0 4px;
+    border-left:4px solid var(--gold);
+    padding-left:12px;
+  }
+  p.view-sub{
+    color:#999;
+    font-size:12.5px;
+    margin:0 0 22px 16px;
+    letter-spacing:0.5px;
+  }
+
+  /* ===== Cards / Panels ===== */
+  .panel{
+    background:var(--white);
+    border:1px solid var(--gold);
+    border-radius:6px;
+    padding:20px;
+    color:var(--ink);
+    box-shadow:0 6px 24px rgba(0,0,0,0.45);
+  }
+  .grid{
+    display:grid;
+    gap:18px;
+  }
+  .grid.cols-2{grid-template-columns:1fr 1fr;}
+  .grid.cols-3{grid-template-columns:repeat(3,1fr);}
+  .grid.cols-4{grid-template-columns:repeat(4,1fr);}
+  @media(max-width:900px){
+    .grid.cols-2, .grid.cols-3, .grid.cols-4{grid-template-columns:1fr;}
+  }
+
+  .stat-card{
+    background:var(--white);
+    border:1px solid var(--gold);
+    border-radius:6px;
+    padding:16px 18px;
+    text-align:left;
+  }
+  .stat-card .num{
+    font-size:30px;
+    font-weight:bold;
+    color:var(--ink);
+  }
+  .stat-card .label{
+    font-size:11px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:#555;
+    margin-top:4px;
+  }
+  .stat-card.accent{border-color:var(--gold); border-width:2px;}
+
+  h3.panel-title{
+    margin:0 0 14px;
+    font-size:15px;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    color:var(--ink);
+    border-bottom:2px solid var(--gold);
+    padding-bottom:8px;
+  }
+
+  /* ===== Forms ===== */
+  label{
+    display:block;
+    font-size:11px;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    color:#333;
+    margin-bottom:4px;
+    margin-top:10px;
+  }
+  input[type=text], input[type=date], input[type=time], input[type=email], input[type=tel], select, textarea{
+    width:100%;
+    background:var(--input-bg);
+    border:1px solid var(--input-border);
+    border-radius:4px;
+    padding:9px 10px;
+    font-family:inherit;
+    font-size:13.5px;
+    color:var(--ink);
+  }
+  textarea{resize:vertical;min-height:60px;}
+  input:focus, select:focus, textarea:focus{outline:2px solid var(--gold);}
+  .checkbox-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-top:12px;
+  }
+  .checkbox-row input{width:auto;}
+  .checkbox-row label{margin:0;}
+
+  .btn{
+    display:inline-block;
+    background:var(--gold);
+    color:#000;
+    border:none;
+    padding:10px 18px;
+    border-radius:4px;
+    font-weight:bold;
+    letter-spacing:0.5px;
+    cursor:pointer;
+    font-family:inherit;
+    font-size:13px;
+    margin-top:16px;
+  }
+  .btn:hover{background:var(--gold-bright);}
+  .btn.secondary{
+    background:var(--black);
+    color:var(--gold);
+    border:1px solid var(--gold);
+  }
+  .btn.small{padding:5px 10px;font-size:11px;margin-top:0;}
+  .btn.danger{background:var(--danger);color:#fff;}
+
+  /* ===== Tables / Lists ===== */
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{
+    text-align:left;
+    font-size:11px;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    color:#555;
+    border-bottom:2px solid var(--gold);
+    padding:8px 6px;
+  }
+  td{
+    padding:9px 6px;
+    border-bottom:1px solid #e2e2e2;
+    color:var(--ink);
+    vertical-align:top;
+  }
+  tr.clickable{cursor:pointer;}
+  tr.clickable:hover{background:#faf6ea;}
+
+  .tag{
+    display:inline-block;
+    padding:2px 9px;
+    border-radius:12px;
+    font-size:10px;
+    letter-spacing:0.5px;
+    text-transform:uppercase;
+    font-weight:bold;
+    border:1px solid transparent;
+  }
+  .tag.priority-High{background:#f7dede;color:#7a1f1f;border-color:#7a1f1f;}
+  .tag.priority-Medium{background:#fbeecb;color:#8a6a12;border-color:#c9a24b;}
+  .tag.priority-Low{background:#e6f0e8;color:#2f5d3a;border-color:#2f5d3a;}
+  .tag.channel{background:#eee;color:#000;border-color:#999;}
+  .tag.agenda{background:#0a0a0a;color:var(--gold);border-color:var(--gold);}
+  .tag.category-TransfertoGHL{background:#000;color:#fff;}
+  .tag.category-Transferto3PathCRM{background:#333;color:#fff;}
+  .tag.category-TransfertoTevah{background:#666;color:#fff;}
+  .tag.category-KeepOther{background:#ddd;color:#000;}
+  .tag.overdue{background:#7a1f1f;color:#fff;}
+
+  .link-btn{
+    background:none;border:none;color:#8a6a12;text-decoration:underline;
+    cursor:pointer;font-family:inherit;font-size:inherit;padding:0;
+  }
+  .link-btn:hover{color:var(--ink);}
+
+  .empty-note{color:#777;font-size:13px;padding:10px 0;font-style:italic;}
+
+  .search-bar{
+    display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;
+  }
+  .search-bar input, .search-bar select{max-width:260px;}
+
+  /* ===== Modal (Contact Card) ===== */
+  .overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,0.7);
+    display:none;align-items:center;justify-content:center;z-index:500;
+  }
+  .overlay.active{display:flex;}
+  .modal{
+    background:var(--white);
+    border:2px solid var(--gold);
+    border-radius:8px;
+    width:640px;max-width:92vw;
+    max-height:88vh;overflow-y:auto;
+    padding:0;
+    box-shadow:0 20px 60px rgba(0,0,0,0.6);
+  }
+  .modal-head{
+    background:var(--black);
+    color:var(--gold);
+    padding:14px 20px;
+    display:flex;justify-content:space-between;align-items:center;
+    border-radius:6px 6px 0 0;
+  }
+  .modal-head h3{margin:0;font-size:16px;letter-spacing:1px;}
+  .modal-body{padding:20px;}
+  .close-x{
+    background:none;border:none;color:var(--gold);font-size:20px;cursor:pointer;line-height:1;
+  }
+  .close-x:hover{color:var(--gold-bright);}
+
+  /* ===== Draggable At-a-Glance ===== */
+  .glance{
+    position:fixed;
+    top:90px;right:40px;
+    width:340px;
+    background:var(--white);
+    border:2px solid var(--gold);
+    border-radius:8px;
+    box-shadow:0 20px 50px rgba(0,0,0,0.6);
+    z-index:600;
+    display:none;
+    max-height:70vh;
+    overflow:hidden;
+    display:none;
+    flex-direction:column;
+  }
+  .glance.active{display:flex;}
+  .glance-head{
+    background:var(--black);
+    color:var(--gold);
+    padding:10px 14px;
+    display:flex;justify-content:space-between;align-items:center;
+    cursor:grab;
+    user-select:none;
+    border-radius:6px 6px 0 0;
+  }
+  .glance-head:active{cursor:grabbing;}
+  .glance-head span{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;}
+  .glance-body{padding:12px 14px;overflow-y:auto;}
+  .glance-item{
+    border-bottom:1px solid #eee;
+    padding:8px 0;
+    font-size:12.5px;
+  }
+  .glance-item:last-child{border-bottom:none;}
+  .glance-item .gi-title{font-weight:bold;color:var(--ink);}
+  .glance-item .gi-meta{color:#666;font-size:11px;margin-top:2px;}
+
+  footer{
+    text-align:center;color:#888;font-size:11px;padding:20px;letter-spacing:1px;
+  }
+
+  .login-wrap{
+    min-height:100vh;
+    display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 50% 20%, #1a1a1a 0%, #0a0a0a 70%);
+    padding:20px;
+  }
+  .login-card{
+    background:var(--white);
+    border:2px solid var(--gold);
+    border-radius:8px;
+    padding:34px 32px;
+    width:380px;
+    max-width:100%;
+    box-shadow:0 20px 60px rgba(0,0,0,0.6);
+  }
+  .login-card label{margin-top:14px;}
+  .login-error{
+    background:#f7dede;color:#7a1f1f;border:1px solid #7a1f1f;
+    border-radius:4px;padding:8px 10px;font-size:12px;margin-bottom:10px;
+  }
+</style>
+
+<body>
+
+<div id="loginScreen" class="login-wrap">
+  <div class="login-card">
+    <div class="brand" style="justify-content:center;margin-bottom:6px;">
+      <span class="mark">Aaron's Agenda</span>
+    </div>
+    <p class="sub" style="text-align:center;margin:0 0 22px;color:#999;">Command Center &middot; sign in to continue</p>
+    <div id="loginError" class="login-error" style="display:none;"></div>
+    <div id="loginNameField">
+      <label>Name</label>
+      <input type="text" id="auth_name" placeholder="Your name">
+    </div>
+    <label>Email</label>
+    <input type="text" id="auth_email" placeholder="you@example.com">
+    <label>Password</label>
+    <input type="password" id="auth_password" placeholder="••••••••">
+    <button class="btn" style="width:100%;" id="authSubmitBtn" onclick="submitAuth()">Sign In</button>
+    <p style="text-align:center;font-size:12px;margin-top:14px;color:#aaa;">
+      <span id="authToggleLabel">New to the team?</span>
+      <button class="link-btn" id="authToggleBtn" onclick="toggleAuthMode()">Create an account</button>
+    </p>
+  </div>
+</div>
+
+<div id="appShell" style="display:none;">
+
+<header>
+  <div class="brand">
+    <span class="mark">Aaron's Agenda</span>
+    <span class="sub">Command Center</span>
+  </div>
+  <div class="header-controls">
+    <span class="agenda-pill" id="agendaCount">0 agenda-forward items</span>
+    <span class="agenda-pill" id="userBadge">—</span>
+    <button onclick="doSignOut()">Sign Out</button>
+  </div>
+</header>
+
+<nav class="tabs" id="tabNav">
+  <button data-view="dashboard" class="active" onclick="switchView('dashboard')">Dashboard</button>
+  <button data-view="contacts" onclick="switchView('contacts')">Contacts</button>
+  <button data-view="appointments" onclick="switchView('appointments')">Appointments</button>
+  <button data-view="messages" onclick="switchView('messages')">Messages</button>
+  <button data-view="tasks" onclick="switchView('tasks')">Tasks</button>
+  <button data-view="team" onclick="switchView('team')">Team</button>
+</nav>
+
+<main>
+
+  <!-- DASHBOARD -->
+  <section class="view active" id="view-dashboard">
+    <h2 class="view-title">Dashboard</h2>
+    <p class="view-sub">Every item here answers one question: does this move Aaron's Agenda forward?</p>
+
+    <div class="grid cols-4" style="margin-bottom:22px;">
+      <div class="stat-card accent"><div class="num" id="statAgenda">0</div><div class="label">Agenda-Forward Items</div></div>
+      <div class="stat-card"><div class="num" id="statOverdue">0</div><div class="label">Overdue Tasks</div></div>
+      <div class="stat-card"><div class="num" id="statAppts">0</div><div class="label">Upcoming Appointments</div></div>
+      <div class="stat-card"><div class="num" id="statContacts">0</div><div class="label">Contacts on File</div></div>
+    </div>
+
+    <div class="grid cols-2" style="margin-bottom:18px;">
+      <div class="panel" style="border-color:#7a1f1f;border-width:2px;">
+        <h3 class="panel-title" style="border-bottom-color:#7a1f1f;">🔥 Going Cold (72h+ no contact)</h3>
+        <div id="coldList"></div>
+      </div>
+      <div class="stat-card accent" style="display:flex;flex-direction:column;justify-content:center;">
+        <div class="num" id="statCold">0</div><div class="label">Conversations Going Cold</div>
+      </div>
+    </div>
+
+    <div class="grid cols-2">
+      <div class="panel">
+        <h3 class="panel-title">Overdue Requirements</h3>
+        <div id="overdueList"></div>
+      </div>
+      <div class="panel">
+        <h3 class="panel-title">Upcoming Appointments</h3>
+        <div id="upcomingApptList"></div>
+      </div>
+    </div>
+
+    <div class="grid cols-2" style="margin-top:18px;">
+      <div class="panel">
+        <h3 class="panel-title">Aaron's Agenda — Top Priority</h3>
+        <div id="agendaTopList"></div>
+      </div>
+      <div class="panel">
+        <h3 class="panel-title">Recent Messages</h3>
+        <div id="recentMsgList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACTS -->
+  <section class="view" id="view-contacts">
+    <h2 class="view-title">Contacts</h2>
+    <p class="view-sub">Click a contact to open their card. The At-a-Glance panel opens automatically.</p>
+
+    <div class="grid cols-3" style="align-items:start;">
+      <div class="panel">
+        <h3 class="panel-title">Add Contact</h3>
+        <form onsubmit="return addContact(event)">
+          <label>Name</label><input type="text" id="c_name" required>
+          <label>Number</label><input type="tel" id="c_phone">
+          <label>Email</label><input type="email" id="c_email">
+          <label>Marital Status</label>
+          <select id="c_marital"><option value="">--</option><option>Single</option><option>Married</option><option>Divorced</option><option>Widowed</option></select>
+          <label>Homeowner / Rent</label>
+          <select id="c_housing"><option value="">--</option><option>Homeowner</option><option>Rent</option></select>
+          <label>Occupation</label><input type="text" id="c_occupation">
+          <label>Children</label><input type="text" id="c_children" placeholder="e.g. 2, or names/ages">
+          <label>D.O.B. (auto-calculates age)</label><input type="date" id="c_dob" oninput="onDobInput()">
+          <label>Age <span style="text-transform:none;font-size:10px;color:#777;">(auto-filled from D.O.B. — edit manually if D.O.B. unknown)</span></label>
+          <input type="text" id="c_age" placeholder="e.g. 36-40">
+          <label>Time Zone</label>
+          <select id="c_timezone"><option value="">--</option><option>PST</option><option>MST</option><option>CST</option><option>EST</option></select>
+          <label>Notes</label><textarea id="c_notes"></textarea>
+          <button class="btn" type="submit">Save Contact</button>
+        </form>
+      </div>
+      <div class="panel">
+        <h3 class="panel-title">Directory (<span id="contactCountLabel">0</span>)</h3>
+        <div class="search-bar">
+          <input type="text" id="contactSearch" placeholder="Search name, phone, occupation..." oninput="renderContacts()">
+        </div>
+        <div style="max-height:520px;overflow-y:auto;">
+          <table>
+            <thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Time Zone</th><th>Occupation</th><th id="ownerColHead" style="display:none;">Owner</th><th>Touch</th></tr></thead>
+            <tbody id="contactsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="panel">
+        <h3 class="panel-title">Quick Log &amp; Source Tracking</h3>
+        <p style="font-size:11px;color:#555;margin-top:0;">Log a message straight from Contacts — it lands in the Messages Inbox and tags its source channel here.</p>
+        <form onsubmit="return addMessageFromContacts(event)">
+          <label>Contact</label>
+          <input type="text" id="qc_contact" list="contactNamesList" placeholder="Name" required>
+          <label>Channel</label>
+          <select id="qc_channel"><option>Text</option><option>LinkedIn</option><option>FB</option><option>IG</option><option>Email</option><option>Call</option></select>
+          <label>Message / Summary</label>
+          <div style="display:flex;gap:6px;">
+            <textarea id="qc_content" required style="flex:1;"></textarea>
+            <button type="button" class="btn secondary small" style="height:36px;" onclick="startDictation('qc_content',this)" title="Tap, talk, it transcribes">🎤</button>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="qc_agenda">
+            <label for="qc_agenda" style="margin:0;">Forward Aaron's Agenda</label>
+          </div>
+          <button class="btn" type="submit">Log Message</button>
+        </form>
+        <h3 class="panel-title" style="margin-top:18px;">Source Breakdown</h3>
+        <div id="sourceBreakdown"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- APPOINTMENTS -->
+  <section class="view" id="view-appointments">
+    <h2 class="view-title">Appointments</h2>
+    <p class="view-sub">Track every sit-down that could move a deal forward.</p>
+    <div class="grid cols-2" style="align-items:start;">
+      <div class="panel">
+        <h3 class="panel-title">New Appointment</h3>
+        <form onsubmit="return addAppointment(event)">
+          <label>Client Name</label>
+          <input type="text" id="a_client" list="contactNamesList" required>
+          <datalist id="contactNamesList"></datalist>
+          <label>Date</label><input type="date" id="a_date" required>
+          <label>Time</label><input type="time" id="a_time" required>
+          <label>Type</label>
+          <select id="a_type"><option>1-on-1</option><option>Follow-up Call</option><option>FNA</option><option>Zoom</option><option>In-Person</option><option>Other</option></select>
+          <label>Notes</label><textarea id="a_notes"></textarea>
+          <button class="btn" type="submit">Save Appointment</button>
+        </form>
+      </div>
+      <div class="panel">
+        <h3 class="panel-title">All Appointments</h3>
+        <div style="max-height:560px;overflow-y:auto;">
+          <table>
+            <thead><tr><th>Client</th><th>Date</th><th>Time</th><th>Type</th><th></th></tr></thead>
+            <tbody id="apptTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MESSAGES -->
+  <section class="view" id="view-messages">
+    <h2 class="view-title">Message Inbox</h2>
+    <p class="view-sub">Manual quick-log across every channel. Flag anything that advances Aaron's Agenda.</p>
+    <div class="grid cols-2" style="align-items:start;">
+      <div class="panel">
+        <h3 class="panel-title">Quick Log</h3>
+        <form onsubmit="return addMessage(event)">
+          <label>Contact</label>
+          <input type="text" id="m_contact" list="contactNamesList2" placeholder="Name" required>
+          <datalist id="contactNamesList2"></datalist>
+          <label>Channel</label>
+          <select id="m_channel"><option>Text</option><option>LinkedIn</option><option>FB</option><option>IG</option><option>Email</option><option>Call</option></select>
+          <label>Message / Summary</label>
+          <div style="display:flex;gap:6px;">
+            <textarea id="m_content" required style="flex:1;"></textarea>
+            <button type="button" class="btn secondary small" style="height:36px;" onclick="startDictation('m_content',this)" title="Tap, talk, it transcribes">🎤</button>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="m_agenda">
+            <label for="m_agenda" style="margin:0;">Forward Aaron's Agenda</label>
+          </div>
+          <p style="font-size:11px;color:#555;margin:6px 0 0;line-height:1.5;">
+            <strong>Forward Agenda</strong> = flag this only if the answer to "does this move help forward Aaron's Agenda?" is yes — i.e. it directly advances a deal, an appointment, or a decision, not just a general check-in.
+          </p>
+          <button class="btn" type="submit">Log Message</button>
+        </form>
+      </div>
+      <div class="panel">
+        <h3 class="panel-title">Inbox</h3>
+        <div class="search-bar">
+          <select id="msgChannelFilter" onchange="renderMessages()">
+            <option value="">All Channels</option>
+            <option>Text</option><option>LinkedIn</option><option>FB</option><option>IG</option><option>Email</option><option>Call</option>
+          </select>
+        </div>
+        <div style="max-height:520px;overflow-y:auto;" id="messagesList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TASKS -->
+  <section class="view" id="view-tasks">
+    <h2 class="view-title">To-Do List</h2>
+    <p class="view-sub">Categories reflect where this record needs to go next: GHL, 3 Path CRM, Tevah, or Keep/Other.</p>
+    <div class="grid cols-2" style="align-items:start;">
+      <div class="panel">
+        <h3 class="panel-title">New Task</h3>
+        <form onsubmit="return addTask(event)">
+          <label>Title</label><input type="text" id="t_title" required>
+          <label>Assign To</label><select id="t_assignee"></select>
+          <label>Priority</label>
+          <select id="t_priority"><option>High</option><option selected>Medium</option><option>Low</option></select>
+          <label>Category</label>
+          <select id="t_category">
+            <option value="Transfer to GHL">Transfer to GHL</option>
+            <option value="Transfer to 3 Path CRM">Transfer to 3 Path CRM</option>
+            <option value="Transfer to Tevah">Transfer to Tevah</option>
+            <option value="Keep/Other">Keep/Other</option>
+          </select>
+          <label>Related Contact (optional)</label>
+          <input type="text" id="t_contact" list="contactNamesList3">
+          <datalist id="contactNamesList3"></datalist>
+          <label>Due Date</label><input type="date" id="t_due">
+          <div class="checkbox-row">
+            <input type="checkbox" id="t_agenda">
+            <label for="t_agenda" style="margin:0;">Forward Aaron's Agenda</label>
+          </div>
+          <button class="btn" type="submit">Add Task</button>
+        </form>
+      </div>
+      <div class="panel">
+        <h3 class="panel-title">Tasks</h3>
+        <div class="search-bar">
+          <select id="taskUserFilter" onchange="renderTasks()"></select>
+          <select id="taskStatusFilter" onchange="renderTasks()">
+            <option value="open">Open</option>
+            <option value="all">All</option>
+            <option value="done">Completed</option>
+          </select>
+        </div>
+        <div style="max-height:520px;overflow-y:auto;" id="tasksList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TEAM -->
+  <section class="view" id="view-team">
+    <h2 class="view-title">Team Panel</h2>
+    <p class="view-sub">Open-task totals across every producer on the roster.</p>
+    <div class="panel">
+      <table>
+        <thead><tr><th>Team Member</th><th>Open Tasks</th><th>High Priority Open</th><th>Agenda-Forward Open</th><th>Completed</th></tr></thead>
+        <tbody id="teamTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<footer>AARON'S AGENDA COMMAND CENTER &middot; SYNCED LIVE VIA FIREBASE</footer>
+
+</div>
+
+<!-- Contact Card Modal -->
+<div class="overlay" id="contactOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="cardName">Contact</h3>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button class="btn small" id="cardTouchBtn" onclick="quickTouch(document.getElementById('cardName').textContent)" title="Log a touch right now, no typing">Touch Now</button>
+        <button class="close-x" onclick="closeContactCard()">&times;</button>
+      </div>
+    </div>
+    <div class="modal-body" id="cardBody"></div>
+  </div>
+</div>
+
+<!-- At a Glance draggable panel -->
+<div class="glance" id="glancePanel">
+  <div class="glance-head" id="glanceHead">
+    <span>At a Glance</span>
+    <button class="close-x" onclick="closeGlance()">&times;</button>
+  </div>
+  <div class="glance-body" id="glanceBody"></div>
+</div>
+
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script>
+/* ============ MIGRATION SEED DATA (used once by admin on first login) ============ */
+const SEED_CONTACTS = [{"id": "c1", "recNum": "4", "name": "Alex Cota", "phone": "626-378-2401", "timezone": "PST", "age": "26-30", "dob": "", "email": "", "marital": "", "occupation": "Fire alarm installer", "children": "", "apptDate": "07/13/2024, Round- 2 7/28@ 3pm PST", "notes": "Very cool personality, willing to help, and has an open mind --- 03-12-25 Had trouble getting in touch. Sent iDecide link", "housing": ""}, {"id": "c2", "recNum": "5", "name": "Alex Kim", "phone": "760-780-9214", "timezone": "PST", "age": "36-40", "dob": "", "email": "", "marital": "", "occupation": "Service Manager Fire Alarm", "children": "", "apptDate": "", "notes": "Family Oriented, Detail Oriented, Very Intelligent 03-12-25 Had trouble getting in touch. Sent iDecide link, 5/22: good right now", "housing": ""}, {"id": "c3", "recNum": "6", "name": "Alex Krygsman", "phone": "760-840-0562", "timezone": "PST", "age": "21-25", "dob": "", "email": "", "marital": "", "occupation": "Video Editor and Marketing", "children": "", "apptDate": "1/10/25", "notes": "Funny, Very friendly, Outgoing ---- 1/10/25 Said he is busy and unable to meet with us at this time. *Let's Follow up in 3 months --- 03-12-25 We got in contact before, but he didn't keep the appointment. Sent iDecide link.", "housing": ""}, {"id": "c4", "recNum": "7", "name": "Alfredo Sandoval", "phone": "760-413-8556", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "Does something in finance completed a design project for him Financial Consultant", "children": "", "apptDate": "10/1 - Called and went to VM. AD", "notes": "Intelligent, Very friendly, Family Oriented --- 03-12-25 Sent a message to reconnect", "housing": ""}, {"id": "c5", "recNum": "8", "name": "Amanda Keane", "phone": "760-449-7324", "timezone": "PST", "age": "36-40", "dob": "", "email": "", "marital": "", "occupation": "Unsure", "children": "", "apptDate": "", "notes": "Have a professional relationship from Morongo Casino Customer Service, Hard Working, friendly --- 03-12-25 Called and left a message to let me know if this number no longer belongs to Amanda", "housing": ""}, {"id": "c6", "recNum": "9", "name": "Amethyst Ocean", "phone": "7608987728", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "Hilton", "children": "", "apptDate": "Disconnected number", "notes": "Worked with Amethyst at the Hilton in Desert Hot Springs Hardworking, Fun, Kind", "housing": ""}, {"id": "c7", "recNum": "10", "name": "Amin Ashraf", "phone": "909-800-2234", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "Last known slots supervisor Morongo casino", "children": "", "apptDate": "10/1 - Called at 11: 00 am went to VM.. AD", "notes": "Customer service oriented, family oriented, hardworking --- 03-12-25 Called and left a message to let me know if this number no longer belongs to Amin --- 05-24-25 Called NA/LM", "housing": ""}, {"id": "c8", "recNum": "11", "name": "Analise Knight", "phone": "707-880-2575", "timezone": "PST", "age": "31-35", "dob": "", "email": "", "marital": "", "occupation": "Co-worker from Wulff Electric --- Currently doing book keeping for her moms accounting business 10/1", "children": "", "apptDate": "10/1 - Hit me up in May November through april is shot due to tax season is interested in supporting me. ad", "notes": "Friendly, caring, helpful --- 03-12-25 Acknowledged note to reach back out in May. Sent iDecide --- 5-24-25 Called NA", "housing": ""}, {"id": "c9", "recNum": "12", "name": "Anthony (Poppa)", "phone": "951-992-2058", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "Realestate", "children": "", "apptDate": "", "notes": "Outgoing, Go-getter, Service Ofriented --- 03-12-25 Been missing each other. Sent iDecide link --- 03-19-25 Followed up waiting for a response. [1]", "housing": ""}, {"id": "c10", "recNum": "13", "name": "Anthony & (Summers)", "phone": "323-477-6998", "timezone": "PST", "age": "36-40", "dob": "", "email": "", "marital": "", "occupation": "Owns trucking company", "children": "", "apptDate": "10/1 Called, went to vm. AD Called me back appointment set for 10/12 at 1:30p", "notes": "Self starter, go-getter, customer service oriented --- 03-18-25 Reached out and sent iDeciide to get his thoughts on the Interactive Presentation. Follow up on 03-20-25", "housing": ""}, {"id": "c11", "recNum": "14", "name": "Anthony Corruthers", "phone": "619-279-1923", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "General Manager Hilton", "children": "", "apptDate": "10/1 Called, went to vm. AD", "notes": "Determine to succeed, hardworking, friendly", "housing": ""}, {"id": "c12", "recNum": "15", "name": "Anthony Lopez (AIL)", "phone": "626-340-9257", "timezone": "PST", "age": "36-40", "dob": "", "email": "", "marital": "", "occupation": "Worked in insurance company (AIL} American Income Life", "children": "", "apptDate": "10/1 Called, went to VM. AD", "notes": "Been a long time since I worked with Anthony and I am not sure he will remember me either. Worked together at American Income Life. Should be licenesed Life Agent. 11-2-24 - Called and spoke with Anthony. Very cheerful and upbeat. Is currently working with his Health Insurance license and is interested in working together some time in the future. --- 03-19-25 Sent the GFIdecide interactive", "housing": ""}, {"id": "c13", "recNum": "16", "name": "Anthony Sierra Ramirez", "phone": "916-604-0473", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "Executive for one of the top pharmaceutical indusries in the US", "children": "", "apptDate": "", "notes": "Very Smart, Friendly, Educational --- Wifes Cousin. We have a lot of great motivational conversatioins, Investing etc. --- 03-19-25 Reached out to connect", "housing": ""}, {"id": "c14", "recNum": "17", "name": "April Aguilar/ Gonzalez", "phone": "909-567-4534", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "Worked together at Morongo Casino", "children": "", "apptDate": "Wrong Number", "notes": "Friend from Morongo, Friendly, Loving, Seems to like helping People Currently works as a Rep for a Resort ---- 2-25-25: Just lost a friend on FB sent a message for her to send me a text since I don't have her number.", "housing": ""}, {"id": "c15", "recNum": "18", "name": "Armando Contractor", "phone": "951-826-1611", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "Iron work contractor referred by Mr Alfaro", "children": "", "apptDate": "Sat 7/27 @ 8am: 1on1 (Church)", "notes": "Primary Language is Spanish. Helpful, Informative, Dedicated to Family Know him through Jose Alfaro --- 03-20-25 sent GFIdeicde --- 03-26-25 Sent GFIdecide (Spanish)", "housing": ""}, {"id": "c16", "recNum": "19", "name": "Ashley (Isaiah x GF)", "phone": "626-712-2519", "timezone": "PST", "age": "21-25", "dob": "", "email": "a.haydel2004@gmail.com", "marital": "", "occupation": "Life insurance Agent?? ------ Coaches a sport not sure if soccer or softball", "children": "", "apptDate": "", "notes": "Vibrant, Friendly, service oriented We spoke about a year ago of her interest of getting into Life Insurance, sounded like she was geetting into partnership with a company but I don't know how that went. She is my son's ex girlfriend, ----- a.haydel2004@gmail.com --- 10/24 phone number seems to be out of service. Will try to get a updated phone number", "housing": ""}, {"id": "c17", "recNum": "20", "name": "Atifah", "phone": "310-740-3077", "timezone": "PST", "age": "36-40", "dob": "", "email": "", "marital": "", "occupation": "Nutritionist worked side job with her @ Travis Matthew's", "children": "", "apptDate": "10/1 - Called and spoke to her --- Not available, but is willing to refer", "notes": "Friendly, Educational, Eager to help people live a healthier life-style Worked together with her at Travis Mathews Warehouse back in 2016 ---", "housing": ""}, {"id": "c18", "recNum": "21", "name": "Barbara LaGamba", "phone": "601-281-0249", "timezone": "EST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "HR department for Sedgwick Homes", "children": "", "apptDate": "", "notes": "Friendly,Loves Family, Works Hard Met Barbara in North Carolina at Sedgewick Homes Has a husband who she has to look after and has a small daughter or grand- daughter she is always involved with. She could take advantage of the business portion to make better money to take care of her husband or use some of our services. --- 03-20-25 sent GFIdecide --- 03-24-25 Watched the GFIdecide --- 03-26-25 Called N/A AD --- 06-25-25 Called NA/LM AD", "housing": ""}, {"id": "c19", "recNum": "22", "name": "Barry Bryant", "phone": "909-567-4597", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "Friend/Family from shipmunk warehouse Not working, Wife working at Post Office", "children": "", "apptDate": "10/29: FTA @ 8am PST", "notes": "Funny, Friendly, Hard Working Has a medical issue preventing him from working full time. Takes care of his mom, and could use a business like this to bring income into hi home. Unmarried and has children --- 03-20-25 --- 03-26-25 Sent a Connection Message. He is interested in joining the business but has some health issues he is looking to clear up.", "housing": ""}, {"id": "c20", "recNum": "23", "name": "Belda Velasquez", "phone": "909-782-7059", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "Former server from Morongo Casino", "children": "", "apptDate": "", "notes": "Havent spoken to her since 2015 or so. I believe her husband served in the military, not sure about any children --- 03-26-25 Called L/M to let me know if the number is still current. Belda responded, cold market. Connecting with her. --- 06-25-25 Called N/A", "housing": ""}, {"id": "c21", "recNum": "24", "name": "Ben Sandoval", "phone": "626-624-2472", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "Single, helps his family, Gamer", "children": "", "apptDate": "", "notes": "06-25-25 Called N/A LM", "housing": ""}, {"id": "c22", "recNum": "25", "name": "Benny Perez", "phone": "951-534-7647", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "Former slot attendant Morongo Casino", "children": "", "apptDate": "", "notes": "Friendly, family oriented, driven --- Called N/A", "housing": ""}, {"id": "c23", "recNum": "26", "name": "Berlyn (Cha Cha)", "phone": "626-841-1906", "timezone": "PST", "age": "26-30", "dob": "", "email": "", "marital": "", "occupation": "Works for city of LA", "children": "", "apptDate": "", "notes": "03-26-25 Called and she asked me to follow up next week when she returns from her trip. Is willing to support and jump on a zoom call --- 06-25-25 Called not off until 7pm. 9pm to tomorrow", "housing": ""}, {"id": "c24", "recNum": "27", "name": "Beth (Jk hair)", "phone": "951-595-9535", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "Hair Beautician know from mother in laws hair salon", "children": "", "apptDate": "10/24/24 moved out of state Tennessee saiid she doesn't think she would be helpful to me. I tried asking what is she not interested in and she basically hung up on me not knowing what I am doing.", "notes": "Hardworker, Friendly, Service Oriented", "housing": ""}, {"id": "c25", "recNum": "28", "name": "Big Al", "phone": "951-318-9451", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "Don't know about children/ makes T shirts", "children": "", "apptDate": "10/24/24 Called- tax account go follow up after tax season early May. Not saying.", "notes": "Friendly, Funny, Approachable --- 03-26-25 Called and he is in the middle of tax season. He said to follow up with him later in the month of April. Most likely after the 18th ot so. --- 06-25-25 Called and said he will call me right back 03:27p appointment set for Monday June 30th @ 3pm Worked foor Turbo tax in the past, hated it because limited to help people. Wants to get the word out to help people as well with Taxes. --- 11-04-25 Called to schedule an appointment to go over Business and see if there is a joint venture here. Scheduled to call on Wednesday 11-6- 25 to confirm date.Last time I will call and he will have to call me.", "housing": ""}, {"id": "c26", "recNum": "29", "name": "Bill Romano", "phone": "714-300-3434", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "Usually holds a partner position", "children": "", "apptDate": "", "notes": "Friendly, Smart, Willing to Help --- 03-26-25 --- 06-25-25 Called N/A LM", "housing": ""}, {"id": "c27", "recNum": "30", "name": "Bill Romine", "phone": "951-581-1453", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "Self Employed Contractor", "children": "", "apptDate": "10/1 - Has a friend in the business doing the same thing, looking to follow up in 6 months to see if anything has changed. Told him the carriers have been making modifiications to products that is worth looking into", "notes": "Have a personal relationship from my previous company Helped design a project for him --- 03-26-25 follow up next month. Previous notes said to follow up with him in 6 months.", "housing": ""}, {"id": "c28", "recNum": "31", "name": "Billy Bressler", "phone": "860-398-2787", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "Bartender", "children": "", "apptDate": "", "notes": "Friendly, Go-Getter, Family Oriented --- 06-25-25 Called N/A LM Called back - Miranda is moving back to oklahoma not doing well financial.", "housing": ""}, {"id": "c29", "recNum": "32", "name": "Blendi", "phone": "951-255-1236", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "Casino pit boss/table games", "children": "", "apptDate": "", "notes": "Smart, Driven, Customer Focused --- 06-25-25 Called N/A", "housing": ""}, {"id": "c30", "recNum": "33", "name": "Bobby Jackson", "phone": "951-452-0685", "timezone": "PST", "age": "60\"s", "dob": "", "email": "", "marital": "", "occupation": "Independent Truck driver", "children": "", "apptDate": "", "notes": "Funny, Hardworking, Educator --- 06-25-25 Called, sent text appointment set for Thursday 06-26-25 @ 5pm ------- 11-04-25 Called and LM ---- 12/6/25 Would like to partner on a referral basis letting people know what he has, speaking to people about retirement and how people handle their money.", "housing": ""}, {"id": "c31", "recNum": "34", "name": "Brean Duncan", "phone": "707-761-3734", "timezone": "PST", "age": "36-40", "dob": "", "email": "brean.duncan@gmail.com", "marital": "", "occupation": "Electrical Engineer", "children": "", "apptDate": "", "notes": "Smart, Driven, Funny brean.duncan@gmail.com --- 06-25-25 Called N/A", "housing": ""}, {"id": "c32", "recNum": "35", "name": "Brent Cooper", "phone": "714-865-5688", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "Sales and Service Specialist West Coast Fire /special needs daughter", "children": "", "apptDate": "", "notes": "Funny, Approahcable, Hardworking --- 06-25-25 Called,", "housing": ""}, {"id": "c33", "recNum": "36", "name": "Brett Massip", "phone": "714-262-9138", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "Lead Sales Engineer (Eaton)", "children": "", "apptDate": "", "notes": "Funny, Approahcable, solutions provide mentality", "housing": ""}, {"id": "c34", "recNum": "37", "name": "Brian Eller", "phone": "336-703-8971", "timezone": "EST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "Estimator -- SedgeWick Homes LLC North Carolina", "children": "", "apptDate": "", "notes": "Smart, Friendly, Church and Family Oriented --- Met Brian when I worked for Sedgewick Homes as a designer in North Carolina --- 06-25-25 Called N/A LM", "housing": ""}, {"id": "c35", "recNum": "38", "name": "Brian Pearson", "phone": "951-315-0838", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "Not sure about kids/casino f&b director", "children": "", "apptDate": "", "notes": "Hard Working, Family Oriented, Smart --- 06-25-25 Called N/A", "housing": ""}, {"id": "c36", "recNum": "39", "name": "Brittany McDonnell", "phone": "909-708-0021", "timezone": "PST", "age": "31-35", "dob": "", "email": "", "marital": "", "occupation": "Bartending", "children": "", "apptDate": "", "notes": "Bubbly, Funny, Social Butterfly ------- Know her from Morongo Casino --- 06-25-25 Called not at the moment. Gfidecide", "housing": ""}, {"id": "c37", "recNum": "40", "name": "Bro. Andrew Haskins", "phone": "909-295-5506", "timezone": "PST", "age": "31-35", "dob": "", "email": "", "marital": "", "occupation": "Realestate", "children": "", "apptDate": "", "notes": "Funny, Driven, Family Oriented --- 03-11-25 spoke to him and and has a couple clients who are curious, and told them he will get back with them after tax season. Give him a week to get info with clients. Scheduled follow up with him for 3-19-25 to discuss further --- 03-18-25 canceled my meeting with him and he said he is busy and won't be available until april. Sorry, but keep it pushing. He will have to hit me up when he needs me. --- 06-25-25 Called N/A LM. --- 12/22/25 Text Andre and he is not interested in getting license at this point [2]", "housing": ""}, {"id": "c38", "recNum": "41", "name": "Bro. Jordon Salas **", "phone": "951-205-4118", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "Church/Banking?", "children": "", "apptDate": "11/14/25 08:00a", "notes": "Faith, Funny, Helping mentality --- 06-25-25 gets off work at 6pm works in accounting --- 11-04-25 Called and LM", "housing": ""}, {"id": "c39", "recNum": "42", "name": "Broc Armbruster", "phone": "714-852-8901", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "Fire Alarm Sales Rep", "children": "", "apptDate": "", "notes": "Hardworking, Familyy Oriented, Approachable ------- Know from my current fire alarm Company PyroComm --- Uninterested in the business --- 06-25-25 Called N/A LM", "housing": ""}, {"id": "c40", "recNum": "43", "name": "Brother Joe", "phone": "951-502-6767", "timezone": "PST", "age": "36-40", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c41", "recNum": "44", "name": "Carlos (Cielo)", "phone": "951-233-4039", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c42", "recNum": "45", "name": "Carol Perry", "phone": "626-705-4939", "timezone": "PST", "age": "60\"s", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c43", "recNum": "47", "name": "Caroline Villasante", "phone": "951-380-9226", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c44", "recNum": "48", "name": "Cat (AIL)", "phone": "909-362-7037", "timezone": "PST", "age": "", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c45", "recNum": "49", "name": "Cedar Lanmon", "phone": "951-208-5495", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c46", "recNum": "50", "name": "Cesar (Elvira)", "phone": "909-910-6136", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c47", "recNum": "51", "name": "Chad Fiscus", "phone": "909-810-7359", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c48", "recNum": "52", "name": "Charmayne Keys", "phone": "951-484-9883", "timezone": "PST", "age": "36-40", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c49", "recNum": "53", "name": "Chef Derrick", "phone": "951-733-0137", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c50", "recNum": "54", "name": "Chris Amis", "phone": "951-378-0178", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c51", "recNum": "56", "name": "Chris Royal", "phone": "909-709-0894", "timezone": "EST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c52", "recNum": "57", "name": "Christopher (Chris) McQueen", "phone": "702-472-1199", "timezone": "PST", "age": "40's", "dob": "", "email": "johnsjimmy957@gmail.com", "marital": "", "occupation": "Warehouse associate", "children": "", "apptDate": "03/20 @3pm", "notes": "God Fearing, Friendly, Open Minded Know from high school Operates (Bubbas & Bibles) social media platform Funny, caring of personal development, focused johnsjimmy957@gmail.com --- 02-25-25 Sent iDecide --- 03-19-25 Chris responded with wanting to learn more about what we do. --- 09-26-25 Passed Away", "housing": ""}, {"id": "c53", "recNum": "58", "name": "Colleen Le", "phone": "949-394-0809", "timezone": "PST", "age": "26-30", "dob": "", "email": "", "marital": "", "occupation": "Administrative Assistant --- West Coast Fire Inc", "children": "", "apptDate": "3/20: not open at the time, but is open to reaching out to Aaron when she's looking to change jobs.", "notes": "Giving, Hard worker, Friendly, Smart, Family Oriented ---- Met Colleen at West Coast Fire Inc.", "housing": ""}, {"id": "c54", "recNum": "59", "name": "Cousin Jessie [3]", "phone": "323-606-3423", "timezone": "PST", "age": "80's", "dob": "", "email": "", "marital": "", "occupation": "I believe self employed", "children": "", "apptDate": "", "notes": "Big Heart, Community Helper, Strong Faith --- Marcus says to have an FNA so she can be a source of referrals", "housing": ""}, {"id": "c55", "recNum": "60", "name": "Cousin Norman Davis", "phone": "954-225-2523", "timezone": "EST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "Former Enineer US NAVY", "children": "", "apptDate": "", "notes": "Approachable, Family Oriented, Loves his country --- 10/24/24 Danny F called, no answer. I called 4:37pm vm. Cousin called back, and set up an appointment for tomorrow 10/25/24 @ 12pm PST", "housing": ""}, {"id": "c56", "recNum": "61", "name": "Dalton Ammon [4]", "phone": "714-309-9805", "timezone": "PST", "age": "26-30", "dob": "", "email": "", "marital": "", "occupation": "Office Manager --- West Coast Fire Inc", "children": "", "apptDate": "", "notes": "Smart, Driven, Hard working --- Met at West Coast fire Inc. --- 03-20-24 Let it cool before reaching out since we just spoke to Colleen Le", "housing": ""}, {"id": "c57", "recNum": "62", "name": "Dan Clark [5]", "phone": "909-720-0285", "timezone": "EST", "age": "60\"s", "dob": "", "email": "", "marital": "", "occupation": "Retired", "children": "", "apptDate": "USE GFI DECIDE!!!!!!", "notes": "Friendly, Helpful, Smart --- Gave me my first chance at working for myself with AutoCAD for Pest Control. Met at Able Storage Moreno Valley --- Send GFIDecide so he can be a source of referrals", "housing": ""}, {"id": "c58", "recNum": "63", "name": "Dan Saechang (Chicken List) [6]", "phone": "951-553-6872", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "Executive Chef --- Morongo Casino Resort", "children": "", "apptDate": "CHICKEN LIST!!!", "notes": "Driven, Hardworking, Passionate --- Former Boss at Casino Morongo", "housing": ""}, {"id": "c59", "recNum": "64", "name": "Dan Scherneck (Chicken List)", "phone": "909-721-0497", "timezone": "PST", "age": "60\"s", "dob": "", "email": "", "marital": "", "occupation": "Former Owner West Coast Fire Inc", "children": "", "apptDate": "", "notes": "Friiendly, Driven, Hardworking --- Consider Dan a friend we worked well together and I can come back to work for him with open arms ---", "housing": ""}, {"id": "c60", "recNum": "65", "name": "Dani Gates", "phone": "951-440-6163", "timezone": "PST", "age": "60\"s", "dob": "", "email": "", "marital": "", "occupation": "Safety & Risk Management Morongo Casino", "children": "", "apptDate": "", "notes": "Friendly, ammazing, Service Oriented --- Dani is a wonderful woman, met her at Morongo Casino", "housing": ""}, {"id": "c61", "recNum": "66", "name": "Danielle Soto", "phone": "951-233-2557", "timezone": "PST", "age": "36-40", "dob": "", "email": "", "marital": "", "occupation": "Works for the City Council", "children": "", "apptDate": "", "notes": "Vibrant, Hardworking, Driven --- Best friends Sister. Not entirely sure which city she is part of council for", "housing": ""}, {"id": "c62", "recNum": "67", "name": "Darnell Russell", "phone": "951-722-2647", "timezone": "PST", "age": "31-35", "dob": "", "email": "", "marital": "", "occupation": "Post office", "children": "", "apptDate": "", "notes": "Comedy Personality, Family Oriented, Amazing Person ---- Worked with him at Casino Morongo Food and Beverage --- 12/18/24 texted Darnell to cathc up and looking to set an appointment for an overview of what we do to educate families. Respectfully declined to speak with me. Still looking for a chance to speak with him as a referral but the ball is in his court. ***Moving on***", "housing": ""}, {"id": "c63", "recNum": "68", "name": "David Dreager", "phone": "916-220-4508", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "Self Employed Contractor", "children": "", "apptDate": "", "notes": "Driven, Family Oriented, Service Oriented --- Met David through my wife's cousin Isabel Dreager he may remeber me, but he knows his wiifes family", "housing": ""}, {"id": "c64", "recNum": "69", "name": "David Embers", "phone": "951-563-3003", "timezone": "PST", "age": "31-35", "dob": "", "email": "", "marital": "", "occupation": "Not sure of employment Has his general contractors license", "children": "", "apptDate": "10/5 @ 11:30am. AD", "notes": "Kind, Helpful, Driven", "housing": ""}, {"id": "c65", "recNum": "70", "name": "Dawn Ramirez", "phone": "714-351-8733", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "Lead Generation Admin --- ICP Building Solutions", "children": "", "apptDate": "", "notes": "Friendly, Entreprenuer, Family Oriented ---- Fina Ramirez Wife/ our cousin", "housing": ""}, {"id": "c66", "recNum": "71", "name": "Debbie (from dollar tree)", "phone": "951-522-3986", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "Retired", "children": "", "apptDate": "", "notes": "Sweet, helpful, friendly Met at dollar tree a couple years ago Enjoys gardening and we bonded over it --- 11/6/24 Made contact to rebuild the relationship", "housing": ""}, {"id": "c67", "recNum": "72", "name": "Delwin Bolton", "phone": "951-897-1213", "timezone": "PST", "age": "36-40", "dob": "", "email": "", "marital": "", "occupation": "Safety Office --- Morongo Casino", "children": "", "apptDate": "", "notes": "Friendly, Fun, Hardworking --- Delwin and I worked as Bar Backs together at Morongo Casion We share art tips on social media from time to time", "housing": ""}, {"id": "c68", "recNum": "73", "name": "Derek Allen", "phone": "951-229-1244", "timezone": "PST", "age": "60\"s", "dob": "", "email": "", "marital": "", "occupation": "Former Chef --- Morongo Casino", "children": "", "apptDate": "", "notes": "Customer Service Oriented, Friendly, Passionate --- Met Chef Derek at Morongo, workked under his direction as Buffet Supervisor", "housing": ""}, {"id": "c69", "recNum": "74", "name": "Dj super Mario B", "phone": "909-518-1844", "timezone": "PST", "age": "40's", "dob": "", "email": "supermario420@aol.com", "marital": "", "occupation": "Disc Jockey", "children": "", "apptDate": "Mailbox Full", "notes": "Very cool, helps people, go getter ------- supermario420@aol.com", "housing": ""}, {"id": "c70", "recNum": "75", "name": "Earl Webb", "phone": "951-321-9191", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "Self Employed EW-Webb Engineering", "children": "", "apptDate": "", "notes": "Detail Oriented, customer service oriented, family oriented", "housing": ""}, {"id": "c71", "recNum": "76", "name": "Ed Black", "phone": "951-961-0555", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "IT Manager and Project Manager --- ICS Inc.", "children": "", "apptDate": "", "notes": "Funny, Family Oriented, Hardworking --- Met Ed at ICS and kicked it off. I was a Systems designer for this company 2018 -2020", "housing": ""}, {"id": "c72", "recNum": "78", "name": "Ed Cadle", "phone": "831-595-1960", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "Project Manager for Electrical Company", "children": "", "apptDate": "9-30-25", "notes": "Down to Earth, MArch to beat of own drum, Hard Working ---- 11/6/24 Called: VM ---- Worked With Ed for Wulff Electric in Northern California. I was a lighting controls specialist for this company 9-29-25 Interested in making additional income ---", "housing": ""}, {"id": "c73", "recNum": "79", "name": "Efrain martinez", "phone": "951-772-3377", "timezone": "PST", "age": "40's", "dob": "", "email": "Efrain@cal-safety.org", "marital": "", "occupation": "Self Employed Fire Alarm Industry", "children": "", "apptDate": "", "notes": "Hardworking, Dedicated, Detailed ----- Efrain@cal-safety.org", "housing": ""}, {"id": "c74", "recNum": "80", "name": "Elliot Kim", "phone": "818-321-4243", "timezone": "PST", "age": "50's", "dob": "", "email": "ekim1234@gmail.com", "marital": "", "occupation": "Self Employed Engineer", "children": "", "apptDate": "Barely Speaks English", "notes": "Detailed oriented, focused, go getter Hire him to perform engineering & calcs for my clients ---- ekim1234@gmail.com", "housing": ""}, {"id": "c75", "recNum": "81", "name": "Elliot Kim", "phone": "818-321-4243", "timezone": "PST", "age": "60\"s", "dob": "", "email": "", "marital": "", "occupation": "Structural Engineer --- AtoZ Engineering", "children": "", "apptDate": "", "notes": "Driven, Hardworking, Customer Service --- Elliot is former plan check engineer for the city of LA. I met Elliot through need for engineering. Hired him and the other engineers for engineering services.", "housing": ""}, {"id": "c76", "recNum": "82", "name": "Eloy Medina", "phone": "909-549-9457", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "Project Manager --- ICS Inc.", "children": "", "apptDate": "", "notes": "Approachable, Hardworking, Family Oriented --- Met Eloy at ICS service. I was the designer who designed his projects for install. 2018 -2020 --- 9-28-30 Sent text message to sit down with him on what I do and be a possible referral source.", "housing": ""}, {"id": "c77", "recNum": "83", "name": "Eric Batts", "phone": "951-807-5650", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c78", "recNum": "84", "name": "Eric Calderon", "phone": "909-554-0399", "timezone": "PST", "age": "36-40", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c79", "recNum": "85", "name": "Eric Lopez", "phone": "909-361-9215", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c80", "recNum": "86", "name": "Eric Nelson [7]", "phone": "512-760-0894", "timezone": "MST", "age": "60\"s", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c81", "recNum": "87", "name": "Eric White", "phone": "951-906-5750", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c82", "recNum": "88", "name": "Erica Surface", "phone": "909-240-6105", "timezone": "PST", "age": "", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c83", "recNum": "89", "name": "Erik Broten", "phone": "909-286-7569", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c84", "recNum": "90", "name": "Erik Martinez", "phone": "760-780-8936", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c85", "recNum": "91", "name": "Esther Bernal", "phone": "951-660-5193", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c86", "recNum": "92", "name": "Farid Wahab", "phone": "916-298-4717", "timezone": "PST", "age": "36-40", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c87", "recNum": "93", "name": "Felipe Fregoso", "phone": "626-264-7222", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c88", "recNum": "94", "name": "Fina Ramirez", "phone": "951-595-6389`", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c89", "recNum": "95", "name": "Fuasto Cordova", "phone": "760-782-7226", "timezone": "PST", "age": "31-35", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c90", "recNum": "96", "name": "Gabby Candelerio", "phone": "9512145982", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c91", "recNum": "97", "name": "Gabe Falls", "phone": "828-405-3056", "timezone": "EST", "age": "36-40", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c92", "recNum": "98", "name": "Gabriel Canchola", "phone": "760-699-4447", "timezone": "PST", "age": "36-40", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c93", "recNum": "100", "name": "Genesis Jenesaisquoi", "phone": "310-579-5422", "timezone": "PST", "age": "36-40", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c94", "recNum": "101", "name": "Genesis Jenesaisquoi", "phone": "310-579-5422", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c95", "recNum": "102", "name": "Gev Yanukyan", "phone": "818-568-6448", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c96", "recNum": "103", "name": "Gino Panzardi", "phone": "951-473-9118", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c97", "recNum": "104", "name": "Glady's Mendez", "phone": "909-420-5759", "timezone": "PST", "age": "36-40", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c98", "recNum": "105", "name": "Glyness Hidalgo", "phone": "951-807-5851", "timezone": "PST", "age": "31-35", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c99", "recNum": "106", "name": "Greg Hacker", "phone": "626-824-2362", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c100", "recNum": "107", "name": "Gus Avila", "phone": "951-675-2828", "timezone": "PST", "age": "36-40", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c101", "recNum": "108", "name": "Gwen Vigil", "phone": "714-745-4772", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c102", "recNum": "109", "name": "Halleh Samavati", "phone": "818-422-8441", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c103", "recNum": "110", "name": "Haydee Burrola", "phone": "323-568-9364", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c104", "recNum": "111", "name": "Hector Navarro", "phone": "714-989-3104", "timezone": "PST", "age": "36-40", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c105", "recNum": "112", "name": "Hector Tapia Sr.", "phone": "951-255-5439", "timezone": "PST", "age": "60\"s", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c106", "recNum": "113", "name": "Helen Nguyen", "phone": "909-809-0974", "timezone": "PST", "age": "36-40", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c107", "recNum": "114", "name": "Isaac Rodriguez", "phone": "909-264-5631", "timezone": "PST", "age": "36-40", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c108", "recNum": "115", "name": "Isabel Sierra", "phone": "916-295-7584", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c109", "recNum": "116", "name": "Ismael Tajeda", "phone": "909-904-6708", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c110", "recNum": "117", "name": "Ivan Zenteno", "phone": "951-224-7926", "timezone": "PST", "age": "36-40", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c111", "recNum": "118", "name": "Jack Rangel [8]", "phone": "951-823-3162", "timezone": "PST", "age": "31-35", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c112", "recNum": "119", "name": "Jackson Thome", "phone": "714-858-5831", "timezone": "PST", "age": "31-35", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c113", "recNum": "120", "name": "Jade Vibar", "phone": "626-391-9601", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c114", "recNum": "121", "name": "Jai Mack", "phone": "336-230-3667", "timezone": "CST", "age": "31-35", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c115", "recNum": "122", "name": "Jaime Duran", "phone": "951-492-5099", "timezone": "PST", "age": "60\"s", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c116", "recNum": "123", "name": "Jalyssa Duchane", "phone": "909-716-5877", "timezone": "PST", "age": "26-30", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c117", "recNum": "124", "name": "James B", "phone": "909-219-0952", "timezone": "PST", "age": "31-35", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c118", "recNum": "125", "name": "James Hallaway", "phone": "951-313-6191", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c119", "recNum": "126", "name": "James Hare", "phone": "909-838-6285", "timezone": "PST", "age": "60\"s", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c120", "recNum": "127", "name": "Jamie Darmody", "phone": "279-202-8251", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c121", "recNum": "128", "name": "Janee McEaly Angulo", "phone": "951-522-2045", "timezone": "PST", "age": "36-40", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c122", "recNum": "129", "name": "Jessie Kelley", "phone": "562-250-7659", "timezone": "PST", "age": "26-30", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c123", "recNum": "130", "name": "Jesus Shongwe", "phone": "760-802-1046", "timezone": "PST", "age": "21-25", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c124", "recNum": "131", "name": "June Ward", "phone": "951-663-8421", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c125", "recNum": "132", "name": "Kaitlyn Longhorns", "phone": "714-656-5619", "timezone": "PST", "age": "21-25", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c126", "recNum": "133", "name": "Kevin Dahl", "phone": "562-556-9849", "timezone": "PST", "age": "31-35", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c127", "recNum": "134", "name": "Kurt Rennels", "phone": "661-510-6907", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c128", "recNum": "135", "name": "Mariella Ledesma", "phone": "951-543-6091", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c129", "recNum": "136", "name": "Matt Huebert", "phone": "702-400-7001", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c130", "recNum": "137", "name": "Nicci Rickenbaker", "phone": "951-385-1347", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c131", "recNum": "138", "name": "Pastor Art Tilman", "phone": "323-216-3991", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c132", "recNum": "139", "name": "Renauld Fuller", "phone": "951-703-9708", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c133", "recNum": "140", "name": "Richard Herman", "phone": "951-259-2851", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c134", "recNum": "141", "name": "Rick", "phone": "951-334-3260", "timezone": "CST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c135", "recNum": "142", "name": "Rick Hernandez", "phone": "909-441-8654", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c136", "recNum": "143", "name": "Rick Jackson", "phone": "951-259-4625", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c137", "recNum": "144", "name": "Rick wood", "phone": "714-923-8085", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c138", "recNum": "145", "name": "Roberta Evans", "phone": "951-322-2621", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c139", "recNum": "146", "name": "Rosalinda Zacharias", "phone": "909-714-0546", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c140", "recNum": "147", "name": "Stepahie Travizo", "phone": "323-612-9815", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "Real Estate", "children": "", "apptDate": "", "notes": "Go-Getter, Great Designer, Beutiful energy Husband is already in GFI business", "housing": ""}, {"id": "c141", "recNum": "148", "name": "Tac Vong", "phone": "909-815-3665", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "Partner with Mighty Development", "children": "", "apptDate": "", "notes": "Helpful Personality, Family Oriented, Driven --- Met in storage business, kept contaact about once a year since 2009 One of the most driven people I have met. Successful in property development, overall very smart person.", "housing": ""}, {"id": "c142", "recNum": "149", "name": "Tarrah (Tay-rah) Amyx", "phone": "208-422-4788", "timezone": "MST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "Contractor", "children": "", "apptDate": "", "notes": "Friendly, Hardworking, Go-Getter ___ 9-6-25 - Called, Paying for his wedding alone Car problems in repair", "housing": ""}, {"id": "c143", "recNum": "150", "name": "Teo (The Terminator)", "phone": "951-522-8238", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "Realestate", "children": "", "apptDate": "", "notes": "Funny, Hardworking, Service Oriented --- 03-08-25 Sent a message on the interractive. Need to follow up with a call to see if the number is still in service. [11]", "housing": ""}, {"id": "c144", "recNum": "151", "name": "Tio Richard", "phone": "951-489-9810", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "Trick driver? / family", "children": "", "apptDate": "", "notes": "03-08-25 Reached out via text that we need to sit down", "housing": ""}, {"id": "c145", "recNum": "152", "name": "Todd Newland", "phone": "909-205-2289", "timezone": "CST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "Project Executive", "children": "", "apptDate": "", "notes": "Amazing Person/Character/ Family Oriented, Driven ---- Designed business renovation project before he moved", "housing": ""}, {"id": "c146", "recNum": "153", "name": "Tony Arzu", "phone": "619-972-1423", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "Senior Project Manager -- Solar Turbines", "children": "", "apptDate": "", "notes": "Driven, Family Oriented, Approachable --- Ex-Brother in law", "housing": ""}, {"id": "c147", "recNum": "154", "name": "Victor Rodriguez", "phone": "760-413-5417", "timezone": "PST", "age": "36-40", "dob": "", "email": "victor_rodriguez90@aol.com", "marital": "", "occupation": "Former Morongo Food and Beverage Shift Manager", "children": "", "apptDate": "3/19: Called, fulltime job, business owner, 4 kids (newborn), want more but feels he don't have time to take on another venture, sent GFIDecide.", "notes": "Funny, Driven, Family Oriented ---- Worked with him at Casino Morongo Food and Beverage ---- called 11/6/24 went VM, called back willing to look at the business. Very busy. Has a side business and doesn't want to keep working for someone. Doesn't see his wife often due to conflicting schedules and does want time back; sent email invitation to sit with me in the next 1-2 days email: victor_rodriguez90@aol.com", "housing": ""}, {"id": "c148", "recNum": "155", "name": "Victor Sepulveda", "phone": "951-306-8194", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "Former Morongo Food and Beverage Shift Manager", "children": "", "apptDate": "", "notes": "Awesome Leadership, Family Oriented, Friendly ---- Worked with him at Casino Morongo Food and Beverage", "housing": ""}, {"id": "c149", "recNum": "156", "name": "Viet Tran", "phone": "714-654-4326", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "Owner of ZeroUV company Huntington Beach", "children": "", "apptDate": "", "notes": "Very friendly, Driven hard worker, Family Oriented", "housing": ""}, {"id": "c150", "recNum": "157", "name": "Wattana Srisoopan", "phone": "951-769-2223", "timezone": "PST", "age": "60\"s", "dob": "", "email": "", "marital": "", "occupation": "Self Employed -- Owner of Beauty Salon", "children": "", "apptDate": "", "notes": "Hospitable, Service Oriented, Driven --- Speakes english but native language is Thai Ex-Mother-N--Law Know a lot of people and loves me", "housing": ""}, {"id": "c151", "recNum": "158", "name": "Colton Webb", "phone": "949-632-5590", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "Business Development Manager", "children": "", "apptDate": "", "notes": "Hard Working, Approachable, Family Man", "housing": ""}, {"id": "c152", "recNum": "159", "name": "Randy (New Contact)", "phone": "951-310-9387", "timezone": "PST", "age": "26-30", "dob": "", "email": "", "marital": "", "occupation": "Truck Driver", "children": "", "apptDate": "", "notes": "Well Spoken, Hard Working, Easy to Talk to --- 03-17-25 Met at corner store. Wife is looking for work. From Mexico. He has dreams he wants to achieve.", "housing": ""}, {"id": "c153", "recNum": "160", "name": "Aaron (New Contact)", "phone": "424-431-7823", "timezone": "PST", "age": "31-35", "dob": "", "email": "", "marital": "", "occupation": "Project Engineer", "children": "", "apptDate": "Spoke with him after GFIDecide input, says disatisfied, but good with his job,", "notes": "Well Spoken, Hard Working, Easy to talk to --- 03-14-25 Sent iDecide and is interested in finding out if he is a good fit. Need to put in front of Marcus. --- 06-25-25 Called asked me to call back in an hour 3:18pm", "housing": ""}, {"id": "c154", "recNum": "161", "name": "Maria McNeil", "phone": "951-892-6088", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c155", "recNum": "162", "name": "Richy (New Contact)", "phone": "661-884-2879", "timezone": "PST", "age": "21-25", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c156", "recNum": "163", "name": "Jay Justin Clabo (New Contact)", "phone": "714-757-1538 (Work)", "timezone": "PST", "age": "36-40", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c157", "recNum": "164", "name": "Anthony Islas (New Contact)", "phone": "951-556-7314", "timezone": "PST", "age": "21-25", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c158", "recNum": "165", "name": "Christian Pace (New Contact)", "phone": "949-550-8137", "timezone": "PST", "age": "31-35", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c159", "recNum": "166", "name": "Lisa Rodriguez", "phone": "", "timezone": "PST", "age": "", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c160", "recNum": "167", "name": "Gwen Jackson", "phone": "", "timezone": "PST", "age": "", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c161", "recNum": "168", "name": "Alik Konovalenko", "phone": "", "timezone": "PST", "age": "", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c162", "recNum": "169", "name": "Elma Leal", "phone": "", "timezone": "PST", "age": "", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c163", "recNum": "170", "name": "Roger T Fritz", "phone": "", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c164", "recNum": "171", "name": "Kelly Kruse", "phone": "", "timezone": "PST", "age": "36-40", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c165", "recNum": "172", "name": "Gene Burke", "phone": "", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c166", "recNum": "173", "name": "Steve Chacon", "phone": "", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c167", "recNum": "174", "name": "Christina Sears (Cousin)", "phone": "504-249-0173", "timezone": "PST", "age": "31-35", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c168", "recNum": "175", "name": "Renee Mansfield", "phone": "470-419-4778", "timezone": "EST", "age": "", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c169", "recNum": "1", "name": "Adam Kueneman", "phone": "909-963-3665", "timezone": "PST", "age": "36-40", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c170", "recNum": "2", "name": "Adam Vigil (Chicken List)", "phone": "714-345-6602", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c171", "recNum": "3", "name": "Adrienne Malek (Chicken List)", "phone": "951-837-5959", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c172", "recNum": "172", "name": "Jayden Knighten", "phone": "702-544-8413", "timezone": "PST", "age": "21-25", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c173", "recNum": "173", "name": "Miguel Gallegos", "phone": "909-402-5158", "timezone": "PST", "age": "40's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c174", "recNum": "174", "name": "Brandon Diaz", "phone": "818-720-9288", "timezone": "PST", "age": "21-25", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c175", "recNum": "175", "name": "Paul ASRV", "phone": "858-260-1224", "timezone": "PST", "age": "21-25", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c176", "recNum": "176", "name": "Denise (Spectrum Rep)", "phone": "714-486-5365", "timezone": "PST", "age": "26-30", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c177", "recNum": "177", "name": "Gabriel (Contractor)", "phone": "951-530-2661", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c178", "recNum": "178", "name": "Greg Kern", "phone": "909-471-4530", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c179", "recNum": "179", "name": "Jesus Macias", "phone": "714-574-6208", "timezone": "PST", "age": "31-35", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c180", "recNum": "180", "name": "Cristian Anguano", "phone": "909-485-3209", "timezone": "PST", "age": "26-30", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c181", "recNum": "181", "name": "Victor Bombay", "phone": "323-608-4084", "timezone": "PST", "age": "36-40", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c182", "recNum": "182", "name": "Javi Vasquez", "phone": "951-464-1795", "timezone": "PST", "age": "26-30", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c183", "recNum": "183", "name": "Nancy Law", "phone": "909-437-7859", "timezone": "PST", "age": "50's", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}, {"id": "c184", "recNum": "184", "name": "Theron Cook", "phone": "951-385-2338", "timezone": "PST", "age": "60\"s", "dob": "", "email": "", "marital": "", "occupation": "", "children": "", "apptDate": "", "notes": "", "housing": ""}];
+
+const IMPORT_BATCH_LINKEDIN_1 = {
+  id: 'linkedin_2026_07_07',
+  contacts: [{"name": "Jacob Almada", "phone": "", "email": "jacob.almada@icloud.com", "marital": "", "housing": "", "occupation": "", "children": "", "age": "", "dob": "", "timezone": "", "notes": ""}, {"name": "Joseph Johnson", "phone": "", "email": "josephs.johnson@outlook.com", "marital": "", "housing": "", "occupation": "", "children": "", "age": "", "dob": "", "timezone": "", "notes": ""}, {"name": "Marcus Martinez", "phone": "", "email": "Martinezmarcus1309@yahoo.com", "marital": "", "housing": "", "occupation": "", "children": "", "age": "", "dob": "", "timezone": "", "notes": ""}, {"name": "Angela Sousa", "phone": "", "email": "asousa@gia.edu", "marital": "", "housing": "", "occupation": "", "children": "", "age": "", "dob": "", "timezone": "", "notes": "I will keep you in mind for others who might need your services."}, {"name": "Corey James, CPTD\u2122", "phone": "", "email": "corey.james@lewismc.com", "marital": "", "housing": "", "occupation": "", "children": "", "age": "", "dob": "", "timezone": "", "notes": ""}, {"name": "Maria Cristina", "phone": "", "email": "mariacrm2011@hotmail.com", "marital": "", "housing": "", "occupation": "", "children": "", "age": "", "dob": "", "timezone": "", "notes": ""}, {"name": "Kevin Palma", "phone": "5597994495", "email": "kevin.palma@sbcglobal.net", "marital": "", "housing": "", "occupation": "", "children": "", "age": "", "dob": "", "timezone": "", "notes": ""}, {"name": "Jeanne Uwanyiligira", "phone": "", "email": "jeanneuwanyiligira8@gmail.com", "marital": "", "housing": "", "occupation": "", "children": "", "age": "", "dob": "", "timezone": "", "notes": ""}, {"name": "Jan Weng", "phone": "", "email": "Jan.Weng2017@gmail.com", "marital": "", "housing": "", "occupation": "", "children": "", "age": "", "dob": "", "timezone": "", "notes": ""}, {"name": "Michael Newkirk", "phone": "909-660-9920", "email": "michaelrnewkirk@gmail.com", "marital": "", "housing": "", "occupation": "", "children": "", "age": "", "dob": "", "timezone": "", "notes": ""}, {"name": "Diane Webster", "phone": "", "email": "", "marital": "", "housing": "", "occupation": "", "children": "", "age": "", "dob": "", "timezone": "", "notes": "Very happy where she works and does not have an interest in pursuing other opportunities at this time."}, {"name": "Kevin Johnson", "phone": "", "email": "kevin.johnson@lewismc.com", "marital": "", "housing": "", "occupation": "", "children": "", "age": "", "dob": "", "timezone": "", "notes": ""}, {"name": "Oscar Figueredo", "phone": "+13213141385", "email": "klbssrvsllc@gmail.com", "marital": "", "housing": "", "occupation": "", "children": "", "age": "", "dob": "", "timezone": "", "notes": "At the same time, time is the most valuable asset for me. If this is something where I can genuinely learn, grow, and create value without losing focus on my main project, then it\u2019s worth exploring."}, {"name": "Jonathan McCarthy", "phone": "5087834939", "email": "firesafetymass@gmail.com", "marital": "", "housing": "", "occupation": "", "children": "", "age": "", "dob": "", "timezone": "", "notes": ""}, {"name": "James Tidwell", "phone": "949-678-9977", "email": "gkyxdfhddq@privaterelay.appleid.com", "marital": "", "housing": "", "occupation": "", "children": "", "age": "", "dob": "", "timezone": "", "notes": "Appreciate the kind words, yes I\u2019m open to a conversation very busy today but am pretty free tomorrow."}, {"name": "Steven Torre", "phone": "7148839772", "email": "steventorre@gmail.com", "marital": "", "housing": "", "occupation": "", "children": "", "age": "", "dob": "", "timezone": "", "notes": "thanks for checing in, I am actually no longer looking for new roles at this time, as something has shifted with my current role. Thanks, Steven"}, {"name": "Cynthia Simas", "phone": "", "email": "cajs1372@gmail.com", "marital": "", "housing": "", "occupation": "", "children": "", "age": "", "dob": "", "timezone": "", "notes": "Hello Aaron, I apologize for the delayed response. I have been dealing with my mother\u2019s health issues. I will have to hold off for a bit until I get her back on track. Sorry. 3/10/26"}, {"name": "Idonis Now", "phone": "9096306070", "email": "Idonis.garcia@icloud.com", "marital": "", "housing": "", "occupation": "", "children": "", "age": "", "dob": "", "timezone": "", "notes": "Open to work banner 7/7/26, Yes, I\u2019m open to it"}, {"name": "Wendy Baca, GSP, RSO", "phone": "", "email": "wendyleannebaca@gmail.com", "marital": "", "housing": "", "occupation": "", "children": "", "age": "", "dob": "", "timezone": "", "notes": "1/6/26 Aaron, my apologies, for not getting back to you sooner on this. I would like more information?And looking forward to having a professional conversation about your company. Thank you"}, {"name": "Jonny Frandsen", "phone": "", "email": "jonxallendesign@gmail.com", "marital": "", "housing": "", "occupation": "", "children": "", "age": "", "dob": "", "timezone": "", "notes": "2/3/26 I have some time tomorrow actually, I got a day off in-lieu of the superbowl coming up. Do you have time tomorrow?"}, {"name": "Theron Lewis", "phone": "", "email": "trlewis01@yahoo.com", "marital": "", "housing": "", "occupation": "", "children": "", "age": "", "dob": "", "timezone": "", "notes": "1/6/26 Happy New Year my friend! What does this entail?"}],
+  messages: [{"contact": "Jacob Almada", "channel": "LinkedIn", "content": "LinkedIn connection \u2014 imported, no reply logged yet.", "agenda": false, "ts": "2026-07-07T12:00:00"}, {"contact": "Joseph Johnson", "channel": "LinkedIn", "content": "LinkedIn connection \u2014 imported, no reply logged yet.", "agenda": false, "ts": "2026-07-07T12:00:00"}, {"contact": "Marcus Martinez", "channel": "LinkedIn", "content": "LinkedIn connection \u2014 imported, no reply logged yet.", "agenda": false, "ts": "2026-07-07T12:00:00"}, {"contact": "Angela Sousa", "channel": "LinkedIn", "content": "I will keep you in mind for others who might need your services.", "agenda": false, "ts": "2026-07-07T12:00:00"}, {"contact": "Corey James, CPTD\u2122", "channel": "LinkedIn", "content": "LinkedIn connection \u2014 imported, no reply logged yet.", "agenda": false, "ts": "2026-07-07T12:00:00"}, {"contact": "Maria Cristina", "channel": "LinkedIn", "content": "LinkedIn connection \u2014 imported, no reply logged yet.", "agenda": false, "ts": "2026-07-07T12:00:00"}, {"contact": "Kevin Palma", "channel": "LinkedIn", "content": "LinkedIn connection \u2014 imported, no reply logged yet.", "agenda": false, "ts": "2026-07-07T12:00:00"}, {"contact": "Jeanne Uwanyiligira", "channel": "LinkedIn", "content": "LinkedIn connection \u2014 imported, no reply logged yet.", "agenda": false, "ts": "2026-07-07T12:00:00"}, {"contact": "Jan Weng", "channel": "LinkedIn", "content": "LinkedIn connection \u2014 imported, no reply logged yet.", "agenda": false, "ts": "2026-07-07T12:00:00"}, {"contact": "Michael Newkirk", "channel": "LinkedIn", "content": "LinkedIn connection \u2014 imported, no reply logged yet.", "agenda": false, "ts": "2026-07-07T12:00:00"}, {"contact": "Diane Webster", "channel": "LinkedIn", "content": "Very happy where she works and does not have an interest in pursuing other opportunities at this time.", "agenda": false, "ts": "2026-07-07T12:00:00"}, {"contact": "Kevin Johnson", "channel": "LinkedIn", "content": "LinkedIn connection \u2014 imported, no reply logged yet.", "agenda": false, "ts": "2026-07-07T12:00:00"}, {"contact": "Oscar Figueredo", "channel": "LinkedIn", "content": "At the same time, time is the most valuable asset for me. If this is something where I can genuinely learn, grow, and create value without losing focus on my main project, then it\u2019s worth exploring.", "agenda": false, "ts": "2026-07-07T12:00:00"}, {"contact": "Jonathan McCarthy", "channel": "LinkedIn", "content": "LinkedIn connection \u2014 imported, no reply logged yet.", "agenda": false, "ts": "2026-07-07T12:00:00"}, {"contact": "James Tidwell", "channel": "LinkedIn", "content": "Appreciate the kind words, yes I\u2019m open to a conversation very busy today but am pretty free tomorrow.", "agenda": false, "ts": "2026-07-07T12:00:00"}, {"contact": "Steven Torre", "channel": "LinkedIn", "content": "thanks for checing in, I am actually no longer looking for new roles at this time, as something has shifted with my current role. Thanks, Steven", "agenda": false, "ts": "2026-07-07T12:00:00"}, {"contact": "Cynthia Simas", "channel": "LinkedIn", "content": "Hello Aaron, I apologize for the delayed response. I have been dealing with my mother\u2019s health issues. I will have to hold off for a bit until I get her back on track. Sorry. 3/10/26", "agenda": false, "ts": "2026-03-10T12:00:00"}, {"contact": "Idonis Now", "channel": "LinkedIn", "content": "Open to work banner 7/7/26, Yes, I\u2019m open to it", "agenda": false, "ts": "2026-07-07T12:00:00"}, {"contact": "Wendy Baca, GSP, RSO", "channel": "LinkedIn", "content": "1/6/26 Aaron, my apologies, for not getting back to you sooner on this. I would like more information?And looking forward to having a professional conversation about your company. Thank you", "agenda": false, "ts": "2026-01-06T12:00:00"}, {"contact": "Jonny Frandsen", "channel": "LinkedIn", "content": "2/3/26 I have some time tomorrow actually, I got a day off in-lieu of the superbowl coming up. Do you have time tomorrow?", "agenda": false, "ts": "2026-02-03T12:00:00"}, {"contact": "Theron Lewis", "channel": "LinkedIn", "content": "1/6/26 Happy New Year my friend! What does this entail?", "agenda": false, "ts": "2026-01-06T12:00:00"}]
+};
+
+/* ============ FIREBASE INIT ============ */
+const firebaseConfig = {
+  apiKey: "AIzaSyCamD3RlNYEUnk1io_qF86OIqDJzrdVvKE",
+  authDomain: "aaron-s-gfi-crm.firebaseapp.com",
+  projectId: "aaron-s-gfi-crm",
+  storageBucket: "aaron-s-gfi-crm.firebasestorage.app",
+  messagingSenderId: "351766346577",
+  appId: "1:351766346577:web:26d6196c62dcc543363170"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+/* ============ LOCAL MIRROR STATE ============
+   Populated live by Firestore onSnapshot listeners. Every render function
+   reads from this — nothing here is the source of truth, Firestore is. */
+let state = {
+  contacts: [], appointments: [], messages: [], tasks: [], users: [],
+  currentUser: null   // { uid, name, email, role }
+};
+let unsubscribers = [];
+function detachListeners(){ unsubscribers.forEach(u=>u()); unsubscribers = []; }
+
+/* ============ AUTH SCREEN ============ */
+let authMode = 'signin';
+function toggleAuthMode(){
+  authMode = authMode === 'signin' ? 'signup' : 'signin';
+  document.getElementById('loginNameField').style.display = authMode==='signup' ? 'block' : 'none';
+  document.getElementById('authSubmitBtn').textContent = authMode==='signup' ? 'Create Account' : 'Sign In';
+  document.getElementById('authToggleLabel').textContent = authMode==='signup' ? 'Already on the team?' : 'New to the team?';
+  document.getElementById('authToggleBtn').textContent = authMode==='signup' ? 'Sign in instead' : 'Create an account';
+  document.getElementById('loginError').style.display = 'none';
+}
+function showAuthError(msg){
+  const el = document.getElementById('loginError');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+async function submitAuth(){
+  const email = document.getElementById('auth_email').value.trim();
+  const password = document.getElementById('auth_password').value;
+  const name = document.getElementById('auth_name').value.trim();
+  if(!email || !password){ showAuthError('Email and password are required.'); return; }
+  const btn = document.getElementById('authSubmitBtn');
+  btn.disabled = true;
+  try{
+    if(authMode === 'signup'){
+      if(!name){ showAuthError('Name is required.'); btn.disabled=false; return; }
+      const cred = await auth.createUserWithEmailAndPassword(email, password);
+      await db.collection('users').doc(cred.user.uid).set({
+        name, email, role: 'member', createdAt: new Date().toISOString()
+      });
+    } else {
+      await auth.signInWithEmailAndPassword(email, password);
+    }
+  }catch(err){
+    showAuthError(err.message || 'Sign-in failed.');
+  }
+  btn.disabled = false;
+}
+function doSignOut(){
+  detachListeners();
+  auth.signOut();
+}
+
+/* ============ ONE-TIME MIGRATION (admin only) ============
+   Uploads the original 184-contact book + the 21-contact LinkedIn batch into
+   Firestore under the admin's ownerId, guarded by a meta doc so it only ever
+   runs once regardless of how many browsers/devices log in afterward. */
+async function runMigrationIfNeeded(uid, name){
+  const metaRef = db.collection('meta').doc('seedStatus');
+  const metaSnap = await metaRef.get();
+  if(metaSnap.exists && metaSnap.data().done) return;
+
+  const batch = db.batch();
+  SEED_CONTACTS.forEach(c=>{
+    const ref = db.collection('contacts').doc();
+    const {id, recNum, apptDate, ...rest} = c;
+    batch.set(ref, Object.assign({}, rest, { ownerId: uid, ownerName: name, createdAt: new Date().toISOString() }));
+  });
+  IMPORT_BATCH_LINKEDIN_1.contacts.forEach(c=>{
+    const ref = db.collection('contacts').doc();
+    batch.set(ref, Object.assign({}, c, { ownerId: uid, ownerName: name, createdAt: new Date().toISOString() }));
+  });
+  IMPORT_BATCH_LINKEDIN_1.messages.forEach(m=>{
+    const ref = db.collection('messages').doc();
+    batch.set(ref, Object.assign({}, m, { ownerId: uid }));
+  });
+  batch.set(metaRef, { done: true, migratedAt: new Date().toISOString(), migratedBy: uid });
+  await batch.commit();
+}
+
+/* ============ AUTH STATE ROUTER ============ */
+auth.onAuthStateChanged(async (user)=>{
+  if(!user){
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('appShell').style.display = 'none';
+    return;
+  }
+  let userDoc = await db.collection('users').doc(user.uid).get();
+  if(!userDoc.exists){
+    // Safety net: signed in but no profile doc (shouldn't normally happen)
+    await db.collection('users').doc(user.uid).set({
+      name: user.email.split('@')[0], email: user.email, role: 'member', createdAt: new Date().toISOString()
+    });
+    userDoc = await db.collection('users').doc(user.uid).get();
+  }
+  const profile = userDoc.data();
+  state.currentUser = { uid: user.uid, name: profile.name, email: profile.email, role: profile.role };
+
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appShell').style.display = 'block';
+  document.getElementById('userBadge').textContent = profile.name + (profile.role==='admin' ? ' · Admin' : '');
+  document.getElementById('ownerColHead').style.display = profile.role==='admin' ? '' : 'none';
+
+  if(profile.role === 'admin'){
+    await runMigrationIfNeeded(user.uid, profile.name);
+  }
+  attachListeners();
+});
+
+/* ============ FIRESTORE LISTENERS (role-aware) ============ */
+function attachListeners(){
+  detachListeners();
+  const isAdmin = state.currentUser.role === 'admin';
+  const uid = state.currentUser.uid;
+
+  function bindCollection(name, stateKey, extraQueries){
+    if(isAdmin){
+      const unsub = db.collection(name).onSnapshot(snap=>{
+        state[stateKey] = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
+        onDataChanged();
+      });
+      unsubscribers.push(unsub);
+    } else {
+      // Member: own records, merged with any extra queries (e.g. tasks assigned-to-me)
+      const merged = {};
+      const rerender = ()=>{ state[stateKey] = Object.values(merged); onDataChanged(); };
+      const unsub1 = db.collection(name).where('ownerId','==',uid).onSnapshot(snap=>{
+        snap.docChanges().forEach(ch=>{
+          if(ch.type==='removed') delete merged[ch.doc.id];
+          else merged[ch.doc.id] = Object.assign({id:ch.doc.id}, ch.doc.data());
+        });
+        rerender();
+      });
+      unsubscribers.push(unsub1);
+      if(extraQueries){
+        extraQueries.forEach(q=>{
+          const unsub2 = db.collection(name).where(q[0],'==',q[1]).onSnapshot(snap=>{
+            snap.docChanges().forEach(ch=>{
+              if(ch.type==='removed'){ if(merged[ch.doc.id] && merged[ch.doc.id].ownerId!==uid) delete merged[ch.doc.id]; }
+              else merged[ch.doc.id] = Object.assign({id:ch.doc.id}, ch.doc.data());
+            });
+            rerender();
+          });
+          unsubscribers.push(unsub2);
+        });
+      }
+    }
+  }
+
+  bindCollection('contacts','contacts');
+  bindCollection('appointments','appointments');
+  bindCollection('messages','messages');
+  bindCollection('tasks','tasks',[['assignee', uid]]);
+
+  if(isAdmin){
+    const unsub = db.collection('users').onSnapshot(snap=>{
+      state.users = snap.docs.map(d=>Object.assign({uid:d.id}, d.data()));
+      renderTeam();
+      populateAssigneeDropdowns();
+    });
+    unsubscribers.push(unsub);
+  } else {
+    state.users = [{ uid: state.currentUser.uid, name: state.currentUser.name, email: state.currentUser.email, role: 'member' }];
+    populateAssigneeDropdowns();
+  }
+}
+let renderScheduled = false;
+function onDataChanged(){
+  if(renderScheduled) return;
+  renderScheduled = true;
+  requestAnimationFrame(()=>{
+    renderScheduled = false;
+    renderContacts(); renderAppointments(); renderMessages(); renderTasks(); renderDashboard();
+  });
+}
+function populateAssigneeDropdowns(){
+  const opts = state.users.map(u=>`<option value="${u.uid}">${escapeHtml(u.name)}</option>`).join('');
+  const tAssignee = document.getElementById('t_assignee');
+  if(tAssignee) tAssignee.innerHTML = opts;
+  const tUserFilter = document.getElementById('taskUserFilter');
+  if(tUserFilter) tUserFilter.innerHTML = `<option value="">Everyone Visible To You</option>` + opts;
+}
+
+/* ============ NAV ============ */
+function switchView(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('active', b.dataset.view===name));
+  if(name==='dashboard') renderDashboard();
+  if(name==='contacts') renderContacts();
+  if(name==='appointments') renderAppointments();
+  if(name==='messages') renderMessages();
+  if(name==='tasks') renderTasks();
+  if(name==='team') renderTeam();
+}
+
+/* ============ HELPERS ============ */
+function escapeHtml(s){
+  return (s||'').toString().replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function findContactByName(name){
+  if(!name) return null;
+  const n = name.trim().toLowerCase();
+  return state.contacts.find(c=>c.name.toLowerCase()===n) || null;
+}
+function isOverdue(dueDate, done){
+  if(!dueDate || done) return false;
+  const today = new Date(); today.setHours(0,0,0,0);
+  return new Date(dueDate) < today;
+}
+function calcAgeFromDob(dobStr){
+  if(!dobStr) return '';
+  const dob = new Date(dobStr);
+  if(isNaN(dob)) return '';
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const m = today.getMonth() - dob.getMonth();
+  if(m < 0 || (m===0 && today.getDate() < dob.getDate())) age--;
+  return age >= 0 ? String(age) : '';
+}
+function onDobInput(){
+  const dob = document.getElementById('c_dob').value;
+  const age = calcAgeFromDob(dob);
+  if(age !== ''){ document.getElementById('c_age').value = age; }
+}
+function contactSource(c){
+  const msgs = state.messages.filter(m=> m.contact && m.contact.toLowerCase()===c.name.toLowerCase());
+  if(!msgs.length) return 'Manual Entry';
+  const earliest = [...msgs].sort((a,b)=> new Date(a.ts) - new Date(b.ts))[0];
+  return earliest.channel;
+}
+function lastMessageAge(c){
+  const msgs = state.messages.filter(m=> m.contact && m.contact.toLowerCase()===c.name.toLowerCase());
+  if(!msgs.length) return {hours:-1, label:'', channel:''};
+  const latest = [...msgs].sort((a,b)=> new Date(b.ts) - new Date(a.ts))[0];
+  const hours = (Date.now() - new Date(latest.ts).getTime()) / 3600000;
+  const label = hours >= 48 ? Math.floor(hours/24)+'d' : Math.floor(hours)+'h';
+  return {hours, label, channel: latest.channel};
+}
+
+/* ============ PRIORITY HIERARCHY ============ */
+const CATEGORY_ORDER = ['Transfer to GHL','Transfer to 3 Path CRM','Transfer to Tevah','Keep/Other'];
+function categoryRank(cat){
+  const i = CATEGORY_ORDER.indexOf(cat);
+  return i === -1 ? CATEGORY_ORDER.length : i;
+}
+function priorityRank(p){
+  return {High:0, Medium:1, Low:2}[p] ?? 3;
+}
+function sortByHierarchy(tasks){
+  return [...tasks].sort((a,b)=>{
+    const c = categoryRank(a.category) - categoryRank(b.category);
+    if(c !== 0) return c;
+    return priorityRank(a.priority) - priorityRank(b.priority);
+  });
+}
+
+/* ============ DICTATION (Web Speech API) ============ */
+function startDictation(targetId, btn){
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SpeechRec){
+    alert('Voice dictation isn\'t supported in this browser. Chrome on Android or desktop works best.');
+    return;
+  }
+  const field = document.getElementById(targetId);
+  const rec = new SpeechRec();
+  rec.lang = 'en-US';
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
+  const originalLabel = btn.textContent;
+  btn.textContent = '● Listening…';
+  btn.disabled = true;
+  rec.onresult = (e)=>{
+    const text = e.results[0][0].transcript;
+    field.value = field.value ? field.value + ' ' + text : text;
+  };
+  rec.onerror = ()=>{ };
+  rec.onend = ()=>{ btn.textContent = originalLabel; btn.disabled = false; };
+  rec.start();
+}
+
+/* ============ CONTACTS ============ */
+async function addContact(e){
+  e.preventDefault();
+  const dob = document.getElementById('c_dob').value;
+  const typedAge = document.getElementById('c_age').value.trim();
+  const c = {
+    name: document.getElementById('c_name').value.trim(),
+    phone: document.getElementById('c_phone').value.trim(),
+    email: document.getElementById('c_email').value.trim(),
+    marital: document.getElementById('c_marital').value,
+    housing: document.getElementById('c_housing').value,
+    occupation: document.getElementById('c_occupation').value.trim(),
+    children: document.getElementById('c_children').value.trim(),
+    age: dob ? (calcAgeFromDob(dob) || typedAge) : typedAge,
+    dob: dob,
+    timezone: document.getElementById('c_timezone').value,
+    notes: document.getElementById('c_notes').value.trim(),
+    ownerId: state.currentUser.uid,
+    ownerName: state.currentUser.name,
+    createdAt: new Date().toISOString()
+  };
+  if(!c.name) return false;
+  await db.collection('contacts').add(c);
+  e.target.reset();
+  return false;
+}
+async function quickTouch(contactName, channel){
+  await db.collection('messages').add({
+    contact: contactName,
+    channel: channel || 'Call',
+    content: '(Quick Touch — logged with one tap, no details entered)',
+    agenda: false,
+    ts: new Date().toISOString(),
+    ownerId: state.currentUser.uid
+  });
+  if(document.getElementById('contactOverlay').classList.contains('active')){
+    const c = state.contacts.find(x=>x.name===contactName);
+    if(c) openContactCard(c.id);
+  }
+}
+function renderContacts(){
+  const q = (document.getElementById('contactSearch')?.value || '').toLowerCase();
+  const tbody = document.getElementById('contactsTableBody');
+  const isAdmin = state.currentUser && state.currentUser.role === 'admin';
+  const filtered = state.contacts.filter(c=>{
+    if(!q) return true;
+    return (c.name||'').toLowerCase().includes(q) || (c.phone||'').includes(q) || (c.occupation||'').toLowerCase().includes(q);
+  });
+  document.getElementById('contactCountLabel').textContent = state.contacts.length;
+  if(filtered.length===0){
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-note">No contacts match.</td></tr>`;
+  } else {
+    tbody.innerHTML = filtered.map(c=>`
+      <tr class="clickable">
+        <td onclick="openContactCard('${c.id}')">${escapeHtml(c.name)}</td>
+        <td onclick="openContactCard('${c.id}')">${escapeHtml(c.phone)}</td>
+        <td onclick="openContactCard('${c.id}')">${escapeHtml(c.email)}</td>
+        <td onclick="openContactCard('${c.id}')">${escapeHtml(c.timezone)}</td>
+        <td onclick="openContactCard('${c.id}')">${escapeHtml(c.occupation)}</td>
+        <td style="${isAdmin?'':'display:none;'}">${escapeHtml(c.ownerName||'')}</td>
+        <td><button class="btn small" onclick="event.stopPropagation();quickTouch('${c.name.replace(/'/g,"\\'")}')" title="Log a touch right now, no typing">Touch</button></td>
+      </tr>`).join('');
+  }
+  renderDatalists();
+  renderSourceBreakdown();
+  updateStat();
+}
+function renderSourceBreakdown(){
+  const el = document.getElementById('sourceBreakdown');
+  if(!el) return;
+  const counts = {};
+  state.messages.forEach(m=>{ counts[m.channel] = (counts[m.channel]||0) + 1; });
+  const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  el.innerHTML = entries.length? entries.map(([ch,n])=>`
+    <div class="glance-item" style="display:flex;justify-content:space-between;">
+      <span class="tag channel">${escapeHtml(ch)}</span><span>${n}</span>
+    </div>`).join('') : '<div class="empty-note">No messages logged yet.</div>';
+}
+async function addMessageFromContacts(e){
+  e.preventDefault();
+  await db.collection('messages').add({
+    contact: document.getElementById('qc_contact').value.trim(),
+    channel: document.getElementById('qc_channel').value,
+    content: document.getElementById('qc_content').value.trim(),
+    agenda: document.getElementById('qc_agenda').checked,
+    ts: new Date().toISOString(),
+    ownerId: state.currentUser.uid
+  });
+  e.target.reset();
+  return false;
+}
+function renderDatalists(){
+  const opts = state.contacts.map(c=>`<option value="${escapeHtml(c.name)}">`).join('');
+  ['contactNamesList','contactNamesList2','contactNamesList3'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.innerHTML = opts;
+  });
+}
+
+function openContactCard(id){
+  const c = state.contacts.find(x=>x.id===id);
+  if(!c) return;
+  document.getElementById('cardName').textContent = c.name;
+  const linkedTasks = state.tasks.filter(t=> t.contactName && t.contactName.toLowerCase()===c.name.toLowerCase());
+  const linkedAppts = state.appointments.filter(a=> a.client && a.client.toLowerCase()===c.name.toLowerCase());
+  const linkedMsgs = state.messages.filter(m=> m.contact && m.contact.toLowerCase()===c.name.toLowerCase());
+  const source = contactSource(c);
+  const lastTouch = lastMessageAge(c);
+
+  document.getElementById('cardBody').innerHTML = `
+    <div class="grid cols-2">
+      <div><label>Number</label><input type="text" value="${escapeHtml(c.phone)}" readonly></div>
+      <div><label>Email</label><input type="text" value="${escapeHtml(c.email)}" readonly></div>
+      <div><label>Marital Status</label><input type="text" value="${escapeHtml(c.marital)}" readonly></div>
+      <div><label>Homeowner / Rent</label><input type="text" value="${escapeHtml(c.housing)}" readonly></div>
+      <div><label>Occupation</label><input type="text" value="${escapeHtml(c.occupation)}" readonly></div>
+      <div><label>Children</label><input type="text" value="${escapeHtml(c.children)}" readonly></div>
+      <div><label>Age</label><input type="text" value="${escapeHtml(c.age)}" readonly></div>
+      <div><label>D.O.B.</label><input type="text" value="${escapeHtml(c.dob)}" readonly></div>
+      <div><label>Time Zone</label><input type="text" value="${escapeHtml(c.timezone)}" readonly></div>
+      <div><label>Source</label><input type="text" value="${escapeHtml(source)}" readonly></div>
+      <div><label>Owner</label><input type="text" value="${escapeHtml(c.ownerName||'')}" readonly></div>
+    </div>
+    ${lastTouch.hours>=72 ? `<div class="glance-item" style="border:1px solid #7a1f1f;border-radius:4px;padding:8px 10px;margin-top:10px;"><span class="tag overdue">Going Cold</span> Last touch ${lastTouch.label} ago via ${escapeHtml(lastTouch.channel)}.</div>` : ''}
+    <label>Notes</label>
+    <textarea readonly>${escapeHtml(c.notes)}</textarea>
+    <h3 class="panel-title" style="margin-top:18px;">Linked Appointments (${linkedAppts.length})</h3>
+    ${linkedAppts.length? linkedAppts.map(a=>`<div class="glance-item"><div class="gi-title">${escapeHtml(a.date)} @ ${escapeHtml(a.time)} — ${escapeHtml(a.type)}</div><div class="gi-meta">${escapeHtml(a.notes||'')}</div></div>`).join('') : '<div class="empty-note">None on file.</div>'}
+    <h3 class="panel-title" style="margin-top:18px;">Linked Tasks (${linkedTasks.length})</h3>
+    ${linkedTasks.length? linkedTasks.map(t=>`<div class="glance-item"><div class="gi-title">${escapeHtml(t.title)} <span class="tag priority-${t.priority}">${t.priority}</span></div><div class="gi-meta">Assigned: ${escapeHtml(t.assigneeName)} &middot; ${escapeHtml(t.category)}</div></div>`).join('') : '<div class="empty-note">None on file.</div>'}
+    <h3 class="panel-title" style="margin-top:18px;">Linked Messages (${linkedMsgs.length})</h3>
+    ${linkedMsgs.length? linkedMsgs.map(m=>`<div class="glance-item"><div class="gi-title">${escapeHtml(m.channel)}${m.agenda?' <span class="tag agenda">Agenda</span>':''}</div><div class="gi-meta">${escapeHtml(m.content)}</div></div>`).join('') : '<div class="empty-note">None on file.</div>'}
+    <button class="btn danger small" style="margin-top:18px;" onclick="deleteContact('${c.id}')">Delete Contact</button>
+  `;
+  document.getElementById('contactOverlay').classList.add('active');
+  openGlanceForContact(c);
+}
+function closeContactCard(){
+  document.getElementById('contactOverlay').classList.remove('active');
+  closeGlance();
+}
+async function deleteContact(id){
+  if(!confirm('Delete this contact permanently?')) return;
+  await db.collection('contacts').doc(id).delete();
+  closeContactCard();
+}
+
+/* ============ AT A GLANCE (draggable, auto-opens on contact card) ============ */
+function openGlanceForContact(c){
+  const relatedTasks = state.tasks.filter(t=>
+    (t.contactName && t.contactName.toLowerCase()===c.name.toLowerCase())
+  );
+  const highImportance = sortByHierarchy(relatedTasks.filter(t=>!t.done));
+  const agendaMsgs = state.messages.filter(m=>m.contact && m.contact.toLowerCase()===c.name.toLowerCase() && m.agenda);
+
+  let html = '';
+  if(highImportance.length===0 && agendaMsgs.length===0){
+    html = '<div class="empty-note">No high-importance items for this contact right now.</div>';
+  } else {
+    highImportance.forEach(t=>{
+      const overdue = isOverdue(t.due, t.done);
+      html += `<div class="glance-item">
+        <div class="gi-title">${escapeHtml(t.title)} <span class="tag priority-${t.priority}">${t.priority}</span> <span class="tag category-${t.category.replace(/[^A-Za-z0-9]/g,'')}">${escapeHtml(t.category)}</span>${overdue?' <span class="tag overdue">Overdue</span>':''}</div>
+        <div class="gi-meta">Assigned to ${escapeHtml(t.assigneeName)}${t.due? ' &middot; Due '+escapeHtml(t.due):''}</div>
+      </div>`;
+    });
+    agendaMsgs.forEach(m=>{
+      html += `<div class="glance-item">
+        <div class="gi-title">Agenda Message &middot; ${escapeHtml(m.channel)}</div>
+        <div class="gi-meta">${escapeHtml(m.content)}</div>
+      </div>`;
+    });
+  }
+  document.getElementById('glanceBody').innerHTML = html;
+  const panel = document.getElementById('glancePanel');
+  panel.style.top = '90px';
+  panel.style.right = '40px';
+  panel.style.left = '';
+  panel.classList.add('active');
+}
+function closeGlance(){
+  document.getElementById('glancePanel').classList.remove('active');
+}
+(function makeDraggable(){
+  const head = document.getElementById('glanceHead');
+  const panel = document.getElementById('glancePanel');
+  let dragging=false, offX=0, offY=0;
+  head.addEventListener('mousedown', e=>{
+    dragging=true;
+    const rect = panel.getBoundingClientRect();
+    offX = e.clientX - rect.left;
+    offY = e.clientY - rect.top;
+    panel.style.right='';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', e=>{
+    if(!dragging) return;
+    panel.style.left = (e.clientX-offX)+'px';
+    panel.style.top = (e.clientY-offY)+'px';
+  });
+  document.addEventListener('mouseup', ()=>{ dragging=false; });
+})();
+
+/* ============ APPOINTMENTS ============ */
+async function addAppointment(e){
+  e.preventDefault();
+  await db.collection('appointments').add({
+    client: document.getElementById('a_client').value.trim(),
+    date: document.getElementById('a_date').value,
+    time: document.getElementById('a_time').value,
+    type: document.getElementById('a_type').value,
+    notes: document.getElementById('a_notes').value.trim(),
+    ownerId: state.currentUser.uid,
+    ownerName: state.currentUser.name
+  });
+  e.target.reset();
+  return false;
+}
+async function deleteAppointment(id){
+  await db.collection('appointments').doc(id).delete();
+}
+function renderAppointments(){
+  const tbody = document.getElementById('apptTableBody');
+  const sorted = [...state.appointments].sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
+  if(sorted.length===0){
+    tbody.innerHTML = `<tr><td colspan="5" class="empty-note">No appointments logged yet.</td></tr>`;
+  } else {
+    tbody.innerHTML = sorted.map(a=>`
+      <tr>
+        <td>${escapeHtml(a.client)}</td>
+        <td>${escapeHtml(a.date)}</td>
+        <td>${escapeHtml(a.time)}</td>
+        <td>${escapeHtml(a.type)}</td>
+        <td><button class="link-btn" onclick="deleteAppointment('${a.id}')">remove</button></td>
+      </tr>`).join('');
+  }
+  updateStat();
+}
+
+/* ============ MESSAGES ============ */
+async function addMessage(e){
+  e.preventDefault();
+  await db.collection('messages').add({
+    contact: document.getElementById('m_contact').value.trim(),
+    channel: document.getElementById('m_channel').value,
+    content: document.getElementById('m_content').value.trim(),
+    agenda: document.getElementById('m_agenda').checked,
+    ts: new Date().toISOString(),
+    ownerId: state.currentUser.uid
+  });
+  e.target.reset();
+  return false;
+}
+async function deleteMessage(id){
+  await db.collection('messages').doc(id).delete();
+}
+function renderMessages(){
+  const filter = document.getElementById('msgChannelFilter')?.value || '';
+  const list = document.getElementById('messagesList');
+  const filtered = state.messages.filter(m=> !filter || m.channel===filter);
+  if(filtered.length===0){
+    list.innerHTML = `<div class="empty-note">No messages logged yet.</div>`;
+  } else {
+    list.innerHTML = filtered.map(m=>`
+      <div class="glance-item" style="display:flex;justify-content:space-between;gap:10px;">
+        <div>
+          <div class="gi-title">${escapeHtml(m.contact)} <span class="tag channel">${escapeHtml(m.channel)}</span>${m.agenda?' <span class="tag agenda">Agenda</span>':''}</div>
+          <div class="gi-meta">${escapeHtml(m.content)}</div>
+        </div>
+        <button class="link-btn" onclick="deleteMessage('${m.id}')">remove</button>
+      </div>`).join('');
+  }
+  updateStat();
+}
+
+/* ============ TASKS ============ */
+async function addTask(e){
+  e.preventDefault();
+  const assigneeUid = document.getElementById('t_assignee').value;
+  const assigneeUser = state.users.find(u=>u.uid===assigneeUid);
+  await db.collection('tasks').add({
+    title: document.getElementById('t_title').value.trim(),
+    assignee: assigneeUid,
+    assigneeName: assigneeUser ? assigneeUser.name : state.currentUser.name,
+    priority: document.getElementById('t_priority').value,
+    category: document.getElementById('t_category').value,
+    contactName: document.getElementById('t_contact').value.trim(),
+    due: document.getElementById('t_due').value,
+    agenda: document.getElementById('t_agenda').checked,
+    done: false,
+    ownerId: state.currentUser.uid,
+    ownerName: state.currentUser.name
+  });
+  e.target.reset();
+  return false;
+}
+async function toggleTask(id){
+  const t = state.tasks.find(x=>x.id===id);
+  if(t){ await db.collection('tasks').doc(id).update({done: !t.done}); }
+}
+async function deleteTask(id){
+  await db.collection('tasks').doc(id).delete();
+}
+function renderTasks(){
+  const userFilter = document.getElementById('taskUserFilter')?.value || '';
+  const statusFilter = document.getElementById('taskStatusFilter')?.value || 'open';
+  let list = [...state.tasks];
+  if(userFilter) list = list.filter(t=>t.assignee===userFilter);
+  if(statusFilter==='open') list = list.filter(t=>!t.done);
+  if(statusFilter==='done') list = list.filter(t=>t.done);
+  list = sortByHierarchy(list);
+
+  const el = document.getElementById('tasksList');
+  if(list.length===0){
+    el.innerHTML = `<div class="empty-note">No tasks match this filter.</div>`;
+  } else {
+    el.innerHTML = list.map(t=>{
+      const overdue = isOverdue(t.due, t.done);
+      return `<div class="glance-item" style="display:flex;justify-content:space-between;gap:10px;">
+        <div>
+          <div class="gi-title">
+            <input type="checkbox" ${t.done?'checked':''} onchange="toggleTask('${t.id}')">
+            ${escapeHtml(t.title)}
+            <span class="tag priority-${t.priority}">${t.priority}</span>
+            <span class="tag category-${t.category.replace(/[^A-Za-z0-9]/g,'')}">${escapeHtml(t.category)}</span>
+            ${t.agenda?'<span class="tag agenda">Agenda</span>':''}
+            ${overdue?'<span class="tag overdue">Overdue</span>':''}
+          </div>
+          <div class="gi-meta">Assigned: ${escapeHtml(t.assigneeName)} ${t.contactName? '&middot; Contact: '+escapeHtml(t.contactName):''} ${t.due? '&middot; Due '+escapeHtml(t.due):''}</div>
+        </div>
+        <button class="link-btn" onclick="deleteTask('${t.id}')">remove</button>
+      </div>`;
+    }).join('');
+  }
+  updateStat();
+}
+
+/* ============ TEAM PANEL (admin only — members see a note instead) ============ */
+function renderTeam(){
+  const tbody = document.getElementById('teamTableBody');
+  if(!state.currentUser) return;
+  if(state.currentUser.role !== 'admin'){
+    tbody.innerHTML = `<tr><td colspan="5" class="empty-note">Only admins see the full team roster.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = state.users.map(u=>{
+    const mine = state.tasks.filter(t=>t.assignee===u.uid);
+    const open = mine.filter(t=>!t.done);
+    const high = open.filter(t=>t.priority==='High');
+    const agenda = open.filter(t=>t.agenda);
+    const done = mine.filter(t=>t.done);
+    return `<tr>
+      <td>${escapeHtml(u.name)}${u.role==='admin'?' <span class="tag agenda">Admin</span>':''}</td>
+      <td>${open.length}</td>
+      <td>${high.length}</td>
+      <td>${agenda.length}</td>
+      <td>${done.length}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ============ DASHBOARD ============ */
+function renderColdList(){
+  const withMsgs = state.contacts.filter(c=> state.messages.some(m=>m.contact && m.contact.toLowerCase()===c.name.toLowerCase()));
+  const cold = withMsgs.map(c=>({c, age: lastMessageAge(c)}))
+    .filter(x=>x.age.hours>=72)
+    .sort((a,b)=>b.age.hours-a.age.hours);
+  document.getElementById('statCold').textContent = cold.length;
+  document.getElementById('coldList').innerHTML = cold.length? cold.map(({c,age})=>`
+    <div class="glance-item">
+      <div class="gi-title"><button class="link-btn" onclick="jumpToContact('${escapeHtml(c.name)}')">${escapeHtml(c.name)}</button> <span class="tag overdue">${age.label} silent</span></div>
+      <div class="gi-meta">Last touch via ${escapeHtml(age.channel)}</div>
+    </div>`).join('') : '<div class="empty-note">Nothing going cold — board is warm.</div>';
+}
+function renderDashboard(){
+  renderColdList();
+  const overdueTasks = sortByHierarchy(state.tasks.filter(t=>isOverdue(t.due, t.done)));
+  const overdueEl = document.getElementById('overdueList');
+  overdueEl.innerHTML = overdueTasks.length? overdueTasks.map(t=>`
+    <div class="glance-item">
+      <div class="gi-title">
+        <button class="link-btn" onclick="jumpToContact('${escapeHtml(t.contactName)}')">${escapeHtml(t.title)}</button>
+        <span class="tag priority-${t.priority}">${t.priority}</span>
+        <span class="tag category-${t.category.replace(/[^A-Za-z0-9]/g,'')}">${escapeHtml(t.category)}</span>
+      </div>
+      <div class="gi-meta">Assigned: ${escapeHtml(t.assigneeName)} &middot; Due ${escapeHtml(t.due)} ${t.contactName? '&middot; Contact: '+escapeHtml(t.contactName):''}</div>
+    </div>`).join('') : '<div class="empty-note">Nothing overdue. Clean board.</div>';
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const upcoming = [...state.appointments]
+    .filter(a=> a.date && new Date(a.date) >= today)
+    .sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time))
+    .slice(0,8);
+  document.getElementById('upcomingApptList').innerHTML = upcoming.length? upcoming.map(a=>`
+    <div class="glance-item">
+      <div class="gi-title">${escapeHtml(a.client)} — ${escapeHtml(a.type)}</div>
+      <div class="gi-meta">${escapeHtml(a.date)} @ ${escapeHtml(a.time)}</div>
+    </div>`).join('') : '<div class="empty-note">No upcoming appointments.</div>';
+
+  const agendaTasks = sortByHierarchy(state.tasks.filter(t=>t.agenda && !t.done)).slice(0,8);
+  document.getElementById('agendaTopList').innerHTML = agendaTasks.length? agendaTasks.map(t=>`
+    <div class="glance-item">
+      <div class="gi-title">${escapeHtml(t.title)} <span class="tag priority-${t.priority}">${t.priority}</span></div>
+      <div class="gi-meta">Assigned: ${escapeHtml(t.assigneeName)} ${t.contactName? '&middot; '+escapeHtml(t.contactName):''}</div>
+    </div>`).join('') : '<div class="empty-note">No agenda-forward tasks flagged.</div>';
+
+  const recentMsgs = [...state.messages].sort((a,b)=> new Date(b.ts)-new Date(a.ts)).slice(0,6);
+  document.getElementById('recentMsgList').innerHTML = recentMsgs.length? recentMsgs.map(m=>`
+    <div class="glance-item">
+      <div class="gi-title">${escapeHtml(m.contact)} <span class="tag channel">${escapeHtml(m.channel)}</span>${m.agenda?' <span class="tag agenda">Agenda</span>':''}</div>
+      <div class="gi-meta">${escapeHtml(m.content)}</div>
+    </div>`).join('') : '<div class="empty-note">No messages logged yet.</div>';
+
+  updateStat();
+}
+function jumpToContact(name){
+  const c = findContactByName(name);
+  switchView('contacts');
+  if(c){ openContactCard(c.id); }
+  else { alert('No matching contact on file for "'+name+'". Add them from the Contacts tab.'); }
+}
+
+/* ============ STATS / AGENDA COUNT ============ */
+function updateStat(){
+  const agendaTasks = state.tasks.filter(t=>t.agenda && !t.done).length;
+  const agendaMsgs = state.messages.filter(m=>m.agenda).length;
+  const totalAgenda = agendaTasks + agendaMsgs;
+  document.getElementById('agendaCount').textContent = totalAgenda + ' agenda-forward item' + (totalAgenda===1?'':'s');
+  document.getElementById('statAgenda').textContent = totalAgenda;
+  document.getElementById('statOverdue').textContent = state.tasks.filter(t=>isOverdue(t.due,t.done)).length;
+  const today = new Date(); today.setHours(0,0,0,0);
+  document.getElementById('statAppts').textContent = state.appointments.filter(a=>a.date && new Date(a.date)>=today).length;
+  document.getElementById('statContacts').textContent = state.contacts.length;
+}
+
+document.getElementById('contactOverlay').addEventListener('click', e=>{
+  if(e.target.id==='contactOverlay') closeContactCard();
+});
+</script>
+
+</body>
+</html>
