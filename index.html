@@ -422,6 +422,10 @@
     background:#f7dede;color:#7a1f1f;border:1px solid #7a1f1f;
     border-radius:4px;padding:8px 10px;font-size:12px;margin-bottom:10px;
   }
+  .login-success{
+    background:#e6f0e8;color:#2f5d3a;border:1px solid #2f5d3a;
+    border-radius:4px;padding:8px 10px;font-size:12px;margin-bottom:10px;
+  }
   @media(max-width:480px){
     .login-wrap{padding:12px;}
     .login-card{padding:24px 20px;}
@@ -437,6 +441,7 @@
     </div>
     <p class="sub" style="text-align:center;margin:0 0 22px;color:#999;">Command Center &middot; sign in to continue</p>
     <div id="loginError" class="login-error" style="display:none;"></div>
+    <div id="loginSuccess" class="login-success" style="display:none;"></div>
     <div id="loginNameField">
       <label>Name</label>
       <input type="text" id="auth_name" placeholder="Your name">
@@ -449,6 +454,9 @@
     <p style="text-align:center;font-size:12px;margin-top:14px;color:#aaa;">
       <span id="authToggleLabel">New to the team?</span>
       <button class="link-btn" id="authToggleBtn" onclick="toggleAuthMode()">Create an account</button>
+    </p>
+    <p id="forgotPasswordRow" style="text-align:center;font-size:12px;margin-top:2px;">
+      <button class="link-btn" onclick="forgotPassword()">Forgot password?</button>
     </p>
   </div>
 </div>
@@ -734,6 +742,7 @@
     <div class="modal-head">
       <h3 id="cardName">Contact</h3>
       <div style="display:flex;align-items:center;gap:10px;">
+        <button class="btn secondary small" id="cardEditBtn" onclick="renderContactCard(document.getElementById('contactOverlay').dataset.contactId, true)">Edit</button>
         <button class="btn small" id="cardTouchBtn" onclick="quickTouch(document.getElementById('cardName').textContent)" title="Log a touch right now, no typing">Touch Now</button>
         <button class="close-x" onclick="closeContactCard()">&times;</button>
       </div>
@@ -796,12 +805,36 @@ function toggleAuthMode(){
   document.getElementById('authSubmitBtn').textContent = authMode==='signup' ? 'Create Account' : 'Sign In';
   document.getElementById('authToggleLabel').textContent = authMode==='signup' ? 'Already on the team?' : 'New to the team?';
   document.getElementById('authToggleBtn').textContent = authMode==='signup' ? 'Sign in instead' : 'Create an account';
+  document.getElementById('forgotPasswordRow').style.display = authMode==='signup' ? 'none' : 'block';
   document.getElementById('loginError').style.display = 'none';
+  document.getElementById('loginSuccess').style.display = 'none';
 }
 function showAuthError(msg){
+  document.getElementById('loginSuccess').style.display = 'none';
   const el = document.getElementById('loginError');
   el.textContent = msg;
   el.style.display = 'block';
+}
+function showAuthSuccess(msg){
+  document.getElementById('loginError').style.display = 'none';
+  const el = document.getElementById('loginSuccess');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+async function forgotPassword(){
+  const email = document.getElementById('auth_email').value.trim();
+  if(!email){ showAuthError('Enter your email above first, then tap "Forgot password?" again.'); return; }
+  try{
+    await auth.sendPasswordResetEmail(email);
+    showAuthSuccess('If an account exists for ' + email + ', a reset link is on its way — check your inbox (and spam folder).');
+  }catch(err){
+    if(err.code === 'auth/invalid-email'){
+      showAuthError('That doesn\'t look like a valid email address.');
+    } else {
+      // Don't reveal whether the account exists — same message either way.
+      showAuthSuccess('If an account exists for ' + email + ', a reset link is on its way — check your inbox (and spam folder).');
+    }
+  }
 }
 async function submitAuth(){
   const email = document.getElementById('auth_email').value.trim();
@@ -1158,9 +1191,63 @@ function renderDatalists(){
 }
 
 function openContactCard(id){
+  renderContactCard(id, false);
+  document.getElementById('contactOverlay').classList.add('active');
+  const c = state.contacts.find(x=>x.id===id);
+  if(c) openGlanceForContact(c);
+}
+function renderContactCard(id, editMode){
   const c = state.contacts.find(x=>x.id===id);
   if(!c) return;
+  document.getElementById('contactOverlay').dataset.contactId = id;
   document.getElementById('cardName').textContent = c.name;
+  document.getElementById('cardEditBtn').style.display = editMode ? 'none' : 'inline-block';
+
+  if(editMode){
+    document.getElementById('cardBody').innerHTML = `
+      <div class="grid cols-2">
+        <div><label>Number</label><input type="tel" id="ce_phone" value="${escapeHtml(c.phone)}"></div>
+        <div><label>Email</label><input type="email" id="ce_email" value="${escapeHtml(c.email)}"></div>
+        <div><label>Marital Status</label>
+          <select id="ce_marital">
+            <option value="" ${!c.marital?'selected':''}>--</option>
+            <option ${c.marital==='Single'?'selected':''}>Single</option>
+            <option ${c.marital==='Married'?'selected':''}>Married</option>
+            <option ${c.marital==='Divorced'?'selected':''}>Divorced</option>
+            <option ${c.marital==='Widowed'?'selected':''}>Widowed</option>
+          </select>
+        </div>
+        <div><label>Homeowner / Rent</label>
+          <select id="ce_housing">
+            <option value="" ${!c.housing?'selected':''}>--</option>
+            <option ${c.housing==='Homeowner'?'selected':''}>Homeowner</option>
+            <option ${c.housing==='Rent'?'selected':''}>Rent</option>
+          </select>
+        </div>
+        <div><label>Occupation</label><input type="text" id="ce_occupation" value="${escapeHtml(c.occupation)}"></div>
+        <div><label>Children</label><input type="text" id="ce_children" value="${escapeHtml(c.children)}"></div>
+        <div><label>Age</label><input type="text" id="ce_age" value="${escapeHtml(c.age)}"></div>
+        <div><label>D.O.B.</label><input type="date" id="ce_dob" value="${escapeHtml(c.dob)}" oninput="const a=calcAgeFromDob(this.value); if(a!=='') document.getElementById('ce_age').value=a;"></div>
+        <div><label>Time Zone</label>
+          <select id="ce_timezone">
+            <option value="" ${!c.timezone?'selected':''}>--</option>
+            <option ${c.timezone==='PST'?'selected':''}>PST</option>
+            <option ${c.timezone==='MST'?'selected':''}>MST</option>
+            <option ${c.timezone==='CST'?'selected':''}>CST</option>
+            <option ${c.timezone==='EST'?'selected':''}>EST</option>
+          </select>
+        </div>
+      </div>
+      <label>Notes</label>
+      <textarea id="ce_notes">${escapeHtml(c.notes)}</textarea>
+      <div style="display:flex;gap:10px;margin-top:16px;">
+        <button class="btn" onclick="saveContactEdits('${c.id}', this)">Save Changes</button>
+        <button class="btn secondary" onclick="renderContactCard('${c.id}', false)">Cancel</button>
+      </div>
+    `;
+    return;
+  }
+
   const linkedTasks = state.tasks.filter(t=> t.contactName && t.contactName.toLowerCase()===c.name.toLowerCase());
   const linkedAppts = state.appointments.filter(a=> a.client && a.client.toLowerCase()===c.name.toLowerCase());
   const linkedMsgs = state.messages.filter(m=> m.contact && m.contact.toLowerCase()===c.name.toLowerCase());
@@ -1192,8 +1279,32 @@ function openContactCard(id){
     ${linkedMsgs.length? linkedMsgs.map(m=>`<div class="glance-item"><div class="gi-title">${escapeHtml(m.channel)}${m.agenda?' <span class="tag agenda">Agenda</span>':''}</div><div class="gi-meta">${escapeHtml(m.content)}</div></div>`).join('') : '<div class="empty-note">None on file.</div>'}
     <button class="btn danger small" style="margin-top:18px;" onclick="deleteContact('${c.id}')">Delete Contact</button>
   `;
-  document.getElementById('contactOverlay').classList.add('active');
-  openGlanceForContact(c);
+}
+async function saveContactEdits(id, btn){
+  const dob = document.getElementById('ce_dob').value;
+  const typedAge = document.getElementById('ce_age').value.trim();
+  const updates = {
+    phone: document.getElementById('ce_phone').value.trim(),
+    email: document.getElementById('ce_email').value.trim(),
+    marital: document.getElementById('ce_marital').value,
+    housing: document.getElementById('ce_housing').value,
+    occupation: document.getElementById('ce_occupation').value.trim(),
+    children: document.getElementById('ce_children').value.trim(),
+    age: dob ? (calcAgeFromDob(dob) || typedAge) : typedAge,
+    dob: dob,
+    timezone: document.getElementById('ce_timezone').value,
+    notes: document.getElementById('ce_notes').value.trim()
+  };
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  try{
+    await db.collection('contacts').doc(id).update(updates);
+    renderContactCard(id, false);
+  }catch(err){
+    alert('Could not save: ' + err.message);
+    btn.disabled = false;
+    btn.textContent = 'Save Changes';
+  }
 }
 function closeContactCard(){
   document.getElementById('contactOverlay').classList.remove('active');
