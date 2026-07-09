@@ -3,7 +3,7 @@
    load instantly and offline. Firestore/Auth calls always go to the network —
    this never caches or intercepts live data, only the static app shell. */
 
-const CACHE_NAME = 'aarons-agenda-shell-v2';
+const CACHE_NAME = 'aarons-agenda-shell-v3';
 const SHELL_FILES = [
   './',
   './index.html',
@@ -16,7 +16,10 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_FILES))
   );
-  self.skipWaiting();
+  // Deliberately NOT calling skipWaiting() here. A newly installed worker
+  // sits in "waiting" state until the page explicitly tells it to activate
+  // (via the "Install Update" button) — that's what lets the in-app banner
+  // control the moment of the switch instead of it happening silently.
 });
 
 self.addEventListener('activate', (event) => {
@@ -26,6 +29,12 @@ self.addEventListener('activate', (event) => {
     )
   );
   self.clients.claim();
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('fetch', (event) => {
