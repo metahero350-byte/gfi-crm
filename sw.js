@@ -3,13 +3,17 @@
    load instantly and offline. Firestore/Auth calls always go to the network —
    this never caches or intercepts live data, only the static app shell. */
 
-const CACHE_NAME = 'aarons-agenda-shell-v3';
+const CACHE_NAME = 'aarons-agenda-shell-v6';
 const SHELL_FILES = [
   './',
   './index.html',
   './manifest.json',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './favicon.ico',
+  './favicon-32.png',
+  './favicon-16.png',
+  './apple-touch-icon.png'
 ];
 
 self.addEventListener('install', (event) => {

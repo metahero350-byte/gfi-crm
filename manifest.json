@@ -1,6 +1,6 @@
 {
-  "name": "Aaron's Agenda — Command Center",
-  "short_name": "Aaron's Agenda",
+  "name": "Business Call List",
+  "short_name": "Call List",
   "description": "Insurance Producer command center: contacts, appointments, messages, tasks, and team tracking.",
   "start_url": "./index.html",
   "scope": "./",

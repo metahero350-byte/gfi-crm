@@ -3,13 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Aaron's Agenda — Command Center</title>
+<title>Business Call List</title>
 <link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
 <meta name="theme-color" content="#0a0a0a">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Aaron's Agenda">
+<meta name="apple-mobile-web-app-title" content="Call List">
 <style>
   :root{
     --black:#0a0a0a;
@@ -24,7 +27,7 @@
     --ok:#2f5d3a;
   }
   *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;height:100%;}
+  html,body{margin:0;padding:0;height:100%;overflow-x:hidden;}
   body{
     background:var(--black);
     font-family:'Georgia','Times New Roman',serif;
@@ -437,9 +440,9 @@
 <div id="loginScreen" class="login-wrap">
   <div class="login-card">
     <div class="brand" style="justify-content:center;margin-bottom:6px;">
-      <span class="mark">Aaron's Agenda</span>
+      <span class="mark">Business Call List</span>
     </div>
-    <p class="sub" style="text-align:center;margin:0 0 22px;color:#999;">Command Center &middot; sign in to continue</p>
+    <p class="sub" style="text-align:center;margin:0 0 22px;color:#999;">Sign in to continue</p>
     <div id="loginError" class="login-error" style="display:none;"></div>
     <div id="loginSuccess" class="login-success" style="display:none;"></div>
     <div id="loginNameField">
@@ -465,8 +468,7 @@
 
 <header>
   <div class="brand">
-    <span class="mark">Aaron's Agenda</span>
-    <span class="sub">Command Center</span>
+    <span class="mark" id="brandMark">Business Call List</span>
   </div>
   <div class="header-controls">
     <span class="agenda-pill" id="agendaCount">0 agenda-forward items</span>
@@ -477,7 +479,7 @@
 </header>
 
 <div id="updateBanner" style="display:none;background:#2f5d3a;color:#fff;padding:10px 16px;font-size:12px;text-align:center;">
-  A new version of Aaron's Agenda is ready.
+  A new version of Business Call List is ready.
   <button class="btn small" style="margin:0 0 0 10px;" onclick="installUpdate(this)">Update Now</button>
 </div>
 
@@ -728,16 +730,18 @@
     <h2 class="view-title">Team Panel</h2>
     <p class="view-sub">Open-task totals across every producer on the roster.</p>
     <div class="panel">
-      <table>
-        <thead><tr><th>Team Member</th><th>Open Tasks</th><th>High Priority Open</th><th>Agenda-Forward Open</th><th>Completed</th></tr></thead>
-        <tbody id="teamTableBody"></tbody>
-      </table>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead><tr><th>Team Member</th><th>Open Tasks</th><th>High Priority Open</th><th>Agenda-Forward Open</th><th>Completed</th></tr></thead>
+          <tbody id="teamTableBody"></tbody>
+        </table>
+      </div>
     </div>
   </section>
 
 </main>
 
-<footer>AARON'S AGENDA COMMAND CENTER &middot; SYNCED LIVE VIA FIREBASE</footer>
+<footer>BUSINESS CALL LIST &middot; SYNCED LIVE VIA FIREBASE</footer>
 
 </div>
 
@@ -916,6 +920,9 @@ auth.onAuthStateChanged(async (user)=>{
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appShell').style.display = 'block';
   document.getElementById('userBadge').textContent = profile.name + (profile.role==='admin' ? ' · Admin' : '');
+  const personalTitle = possessiveName(profile.name) + ' Business Call List';
+  document.getElementById('brandMark').textContent = personalTitle;
+  document.title = personalTitle;
   document.getElementById('ownerColHead').style.display = profile.role==='admin' ? '' : 'none';
 
   if(profile.role === 'admin'){
@@ -1012,6 +1019,11 @@ function switchView(name){
 }
 
 /* ============ HELPERS ============ */
+function possessiveName(name){
+  if(!name) return 'Your';
+  const first = name.trim().split(' ')[0];
+  return /s$/i.test(first) ? first + "'" : first + "'s";
+}
 function escapeHtml(s){
   return (s||'').toString().replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
