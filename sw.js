@@ -3,7 +3,7 @@
    load instantly and offline. Firestore/Auth calls always go to the network —
    this never caches or intercepts live data, only the static app shell. */
 
-const CACHE_NAME = 'aarons-agenda-shell-v1';
+const CACHE_NAME = 'aarons-agenda-shell-v2';
 const SHELL_FILES = [
   './',
   './index.html',
