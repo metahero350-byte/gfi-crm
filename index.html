@@ -183,6 +183,36 @@
     .grid.cols-4{grid-template-columns:1fr;}
   }
 
+  .dashboard-tiles{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:18px;
+    align-items:stretch;
+  }
+  @media(max-width:900px){
+    .dashboard-tiles{grid-template-columns:1fr;}
+  }
+  .dash-tile{min-width:0;}
+  .dash-tile.dragging{opacity:0.35;}
+  .dash-tile.drag-target{outline:2px dashed var(--gold);outline-offset:3px;border-radius:8px;}
+  .tile-head{
+    display:flex;align-items:center;gap:8px;
+    border-bottom:2px solid var(--gold);
+    padding-bottom:8px;margin-bottom:14px;
+  }
+  .tile-head .panel-title{border:none;margin:0;padding:0;}
+  .tile-handle{
+    cursor:grab;
+    color:#999;
+    font-size:16px;
+    line-height:1;
+    padding:2px 4px;
+    touch-action:none;
+    user-select:none;
+    flex-shrink:0;
+  }
+  .tile-handle:active{cursor:grabbing;color:var(--ink);}
+
   .stat-card{
     background:var(--white);
     border:1px solid var(--gold);
@@ -452,7 +482,11 @@
     <label>Email</label>
     <input type="text" id="auth_email" placeholder="you@example.com">
     <label>Password</label>
-    <input type="password" id="auth_password" placeholder="••••••••">
+    <div style="position:relative;">
+      <input type="password" id="auth_password" placeholder="••••••••" style="padding-right:56px;">
+      <button type="button" onclick="togglePasswordVisibility(this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:#555;font-size:11px;letter-spacing:0.5px;cursor:pointer;padding:4px 6px;">SHOW</button>
+    </div>
+
     <button class="btn" style="width:100%;" id="authSubmitBtn" onclick="submitAuth()">Sign In</button>
     <p style="text-align:center;font-size:12px;margin-top:14px;color:#aaa;">
       <span id="authToggleLabel">New to the team?</span>
@@ -471,12 +505,18 @@
     <span class="mark" id="brandMark">Business Call List</span>
   </div>
   <div class="header-controls">
+    <select class="user-select" id="viewAsSelect" style="display:none;" onchange="handleViewAsSelectChange(this)"></select>
     <span class="agenda-pill" id="agendaCount">0 agenda-forward items</span>
     <span class="agenda-pill" id="userBadge">—</span>
     <button id="installBtn" onclick="triggerInstall()" style="display:none;">Install App</button>
     <button onclick="doSignOut()">Sign Out</button>
   </div>
 </header>
+
+<div id="viewAsBanner" style="display:none;background:#8a6a12;color:#fff;padding:10px 16px;font-size:12px;text-align:center;">
+  Viewing <strong id="viewAsBannerName"></strong>'s dashboard — anything you add or edit will be saved under their name, exactly as if they'd done it themselves.
+  <button class="btn small" style="margin:0 0 0 10px;" onclick="setViewAs('')">Return to My View</button>
+</div>
 
 <div id="updateBanner" style="display:none;background:#2f5d3a;color:#fff;padding:10px 16px;font-size:12px;text-align:center;">
   A new version of Business Call List is ready.
@@ -501,7 +541,7 @@
 
   <!-- DASHBOARD -->
   <section class="view active" id="view-dashboard">
-    <h2 class="view-title">Dashboard</h2>
+    <h2 class="view-title" id="welcomeTitle">Dashboard</h2>
     <p class="view-sub">Every item here answers one question: does this move Aaron's Agenda forward?</p>
 
     <div class="grid cols-4" style="margin-bottom:22px;">
@@ -511,35 +551,43 @@
       <div class="stat-card"><div class="num" id="statContacts">0</div><div class="label">Contacts on File</div></div>
     </div>
 
-    <div class="grid cols-2" style="margin-bottom:18px;">
-      <div class="panel" style="border-color:#7a1f1f;border-width:2px;">
-        <h3 class="panel-title" style="border-bottom-color:#7a1f1f;">🔥 Going Cold (72h+ no contact)</h3>
-        <div id="coldList"></div>
+    <p style="font-size:11px;color:#777;margin:0 0 10px;">Drag the ⠿ handle on any tile below to rearrange your dashboard. Your layout is remembered on this device.</p>
+    <div id="dashboardTiles" class="dashboard-tiles">
+      <div class="dash-tile" data-tile-id="cold">
+        <div class="panel" style="border-color:#7a1f1f;border-width:2px;height:100%;">
+          <div class="tile-head"><span class="tile-handle" title="Drag to reorder">⠿</span><h3 class="panel-title" style="border-bottom-color:#7a1f1f;">🔥 Going Cold (72h+ no contact)</h3></div>
+          <div id="coldList"></div>
+        </div>
       </div>
-      <div class="stat-card accent" style="display:flex;flex-direction:column;justify-content:center;">
-        <div class="num" id="statCold">0</div><div class="label">Conversations Going Cold</div>
+      <div class="dash-tile" data-tile-id="coldcount">
+        <div class="stat-card accent" style="height:100%;">
+          <div class="tile-head" style="border:none;margin:0 0 8px;padding:0;"><span class="tile-handle" title="Drag to reorder">⠿</span></div>
+          <div class="num" id="statCold">0</div><div class="label">Conversations Going Cold</div>
+        </div>
       </div>
-    </div>
-
-    <div class="grid cols-2">
-      <div class="panel">
-        <h3 class="panel-title">Overdue Requirements</h3>
-        <div id="overdueList"></div>
+      <div class="dash-tile" data-tile-id="overdue">
+        <div class="panel" style="height:100%;">
+          <div class="tile-head"><span class="tile-handle" title="Drag to reorder">⠿</span><h3 class="panel-title">Overdue Requirements</h3></div>
+          <div id="overdueList"></div>
+        </div>
       </div>
-      <div class="panel">
-        <h3 class="panel-title">Upcoming Appointments</h3>
-        <div id="upcomingApptList"></div>
+      <div class="dash-tile" data-tile-id="appts">
+        <div class="panel" style="height:100%;">
+          <div class="tile-head"><span class="tile-handle" title="Drag to reorder">⠿</span><h3 class="panel-title">Upcoming Appointments</h3></div>
+          <div id="upcomingApptList"></div>
+        </div>
       </div>
-    </div>
-
-    <div class="grid cols-2" style="margin-top:18px;">
-      <div class="panel">
-        <h3 class="panel-title">Aaron's Agenda — Top Priority</h3>
-        <div id="agendaTopList"></div>
+      <div class="dash-tile" data-tile-id="agenda">
+        <div class="panel" style="height:100%;">
+          <div class="tile-head"><span class="tile-handle" title="Drag to reorder">⠿</span><h3 class="panel-title">Aaron's Agenda — Top Priority</h3></div>
+          <div id="agendaTopList"></div>
+        </div>
       </div>
-      <div class="panel">
-        <h3 class="panel-title">Recent Messages</h3>
-        <div id="recentMsgList"></div>
+      <div class="dash-tile" data-tile-id="messages">
+        <div class="panel" style="height:100%;">
+          <div class="tile-head"><span class="tile-handle" title="Drag to reorder">⠿</span><h3 class="panel-title">Recent Messages</h3></div>
+          <div id="recentMsgList"></div>
+        </div>
       </div>
     </div>
   </section>
@@ -575,6 +623,11 @@
         <h3 class="panel-title">Directory (<span id="contactCountLabel">0</span>)</h3>
         <div class="search-bar">
           <input type="text" id="contactSearch" placeholder="Search name, phone, occupation..." oninput="renderContacts()">
+          <select id="contactSort" onchange="renderContacts()">
+            <option value="az">Name (A–Z)</option>
+            <option value="za">Name (Z–A)</option>
+            <option value="recent">Recently Added</option>
+          </select>
         </div>
         <div style="max-height:520px;overflow-y:auto;overflow-x:auto;">
           <table>
@@ -728,7 +781,7 @@
   <!-- TEAM -->
   <section class="view" id="view-team">
     <h2 class="view-title">Team Panel</h2>
-    <p class="view-sub">Open-task totals across every producer on the roster.</p>
+    <p class="view-sub">Open-task totals across every producer on the roster. Tap a name to view and edit their dashboard as them.</p>
     <div class="panel">
       <div style="overflow-x:auto;">
         <table>
@@ -801,7 +854,8 @@ const db = firebase.firestore();
    reads from this — nothing here is the source of truth, Firestore is. */
 let state = {
   contacts: [], appointments: [], messages: [], tasks: [], users: [],
-  currentUser: null   // { uid, name, email, role }
+  currentUser: null,  // { uid, name, email, role }
+  viewAsUid: null      // admin-only: when set, dashboard/CRUD act as this team member
 };
 let unsubscribers = [];
 function detachListeners(){ unsubscribers.forEach(u=>u()); unsubscribers = []; }
@@ -833,8 +887,12 @@ function showAuthSuccess(msg){
 async function forgotPassword(){
   const email = document.getElementById('auth_email').value.trim();
   if(!email){ showAuthError('Enter your email above first, then tap "Forgot password?" again.'); return; }
+  // Send people back to this app after they reset, instead of Firebase's generic confirmation page.
+  // This only works because metahero350-byte.github.io is already in Firebase's Authorized Domains list —
+  // no GitHub-side change needed at all; this is entirely a Firebase Auth setting.
+  const actionCodeSettings = { url: window.location.origin + window.location.pathname };
   try{
-    await auth.sendPasswordResetEmail(email);
+    await auth.sendPasswordResetEmail(email, actionCodeSettings);
     showAuthSuccess('If an account exists for ' + email + ', a reset link is on its way — check your inbox (and spam folder).');
   }catch(err){
     if(err.code === 'auth/invalid-email'){
@@ -929,6 +987,8 @@ auth.onAuthStateChanged(async (user)=>{
     await runMigrationIfNeeded(user.uid, profile.name);
   }
   attachListeners();
+  applyDashboardTileOrder();
+  initDashboardDragDrop();
 });
 
 /* ============ FIRESTORE LISTENERS (role-aware) ============ */
@@ -1003,6 +1063,83 @@ function populateAssigneeDropdowns(){
   if(tAssignee) tAssignee.innerHTML = opts;
   const tUserFilter = document.getElementById('taskUserFilter');
   if(tUserFilter) tUserFilter.innerHTML = `<option value="">Everyone Visible To You</option>` + opts;
+
+  const viewAsSelect = document.getElementById('viewAsSelect');
+  if(state.currentUser && state.currentUser.role === 'admin' && state.users.length > 1){
+    const others = state.users.filter(u=>u.uid !== state.currentUser.uid);
+    viewAsSelect.innerHTML = `<option value="">My View</option>` + others.map(u=>
+      `<option value="${u.uid}" ${state.viewAsUid===u.uid?'selected':''}>View: ${escapeHtml(u.name)}</option>`
+    ).join('');
+    viewAsSelect.style.display = 'inline-block';
+  } else {
+    viewAsSelect.style.display = 'none';
+  }
+}
+
+/* ============ ADMIN "VIEW AS" IMPERSONATION ============
+   Lets an admin see and edit a specific team member's dashboard as if they
+   were that person — new/edited records save under the member's name, not
+   the admin's, so it looks exactly like the member did it themselves. */
+function togglePasswordVisibility(btn){
+  const input = document.getElementById('auth_password');
+  if(input.type === 'password'){
+    input.type = 'text';
+    btn.textContent = 'HIDE';
+  } else {
+    input.type = 'password';
+    btn.textContent = 'SHOW';
+  }
+}
+function handleViewAsSelectChange(select){
+  const uid = select.value;
+  if(!uid){ setViewAs(''); return; }
+  const u = state.users.find(x=>x.uid===uid);
+  const name = u ? u.name : 'this team member';
+  const ok = confirm(`View and edit ${name}'s dashboard as if you were them?\n\nAnything you add, edit, or log while in this mode will be saved under their name, not yours.`);
+  if(ok){ setViewAs(uid); } else { select.value = state.viewAsUid || ''; }
+}
+function confirmViewAs(uid, name){
+  const ok = confirm(`View and edit ${name}'s dashboard as if you were them?\n\nAnything you add, edit, or log while in this mode will be saved under their name, not yours.`);
+  if(ok) setViewAs(uid);
+}
+function setViewAs(uid){
+  state.viewAsUid = uid || null;
+  const banner = document.getElementById('viewAsBanner');
+  const select = document.getElementById('viewAsSelect');
+  if(state.viewAsUid){
+    const u = state.users.find(x=>x.uid===state.viewAsUid);
+    document.getElementById('viewAsBannerName').textContent = u ? u.name : 'this team member';
+    banner.style.display = 'block';
+  } else {
+    banner.style.display = 'none';
+  }
+  if(select) select.value = state.viewAsUid || '';
+  switchView('dashboard');
+  onDataChanged();
+  renderTeam();
+}
+function effectiveOwner(){
+  if(state.currentUser.role === 'admin' && state.viewAsUid){
+    const u = state.users.find(x=>x.uid===state.viewAsUid);
+    if(u) return { uid: u.uid, name: u.name };
+  }
+  return { uid: state.currentUser.uid, name: state.currentUser.name };
+}
+function scopedContacts(){
+  if(state.currentUser.role === 'admin' && state.viewAsUid) return state.contacts.filter(c=>c.ownerId===state.viewAsUid);
+  return state.contacts;
+}
+function scopedAppointments(){
+  if(state.currentUser.role === 'admin' && state.viewAsUid) return state.appointments.filter(a=>a.ownerId===state.viewAsUid);
+  return state.appointments;
+}
+function scopedMessages(){
+  if(state.currentUser.role === 'admin' && state.viewAsUid) return state.messages.filter(m=>m.ownerId===state.viewAsUid);
+  return state.messages;
+}
+function scopedTasks(){
+  if(state.currentUser.role === 'admin' && state.viewAsUid) return state.tasks.filter(t=>t.ownerId===state.viewAsUid || t.assignee===state.viewAsUid);
+  return state.tasks;
 }
 
 /* ============ NAV ============ */
@@ -1113,6 +1250,7 @@ async function addContact(e){
   e.preventDefault();
   const dob = document.getElementById('c_dob').value;
   const typedAge = document.getElementById('c_age').value.trim();
+  const owner = effectiveOwner();
   const c = {
     name: document.getElementById('c_name').value.trim(),
     phone: document.getElementById('c_phone').value.trim(),
@@ -1125,8 +1263,8 @@ async function addContact(e){
     dob: dob,
     timezone: document.getElementById('c_timezone').value,
     notes: document.getElementById('c_notes').value.trim(),
-    ownerId: state.currentUser.uid,
-    ownerName: state.currentUser.name,
+    ownerId: owner.uid,
+    ownerName: owner.name,
     createdAt: new Date().toISOString()
   };
   if(!c.name) return false;
@@ -1135,13 +1273,14 @@ async function addContact(e){
   return false;
 }
 async function quickTouch(contactName, channel){
+  const owner = effectiveOwner();
   await db.collection('messages').add({
     contact: contactName,
     channel: channel || 'Call',
     content: '(Quick Touch — logged with one tap, no details entered)',
     agenda: false,
     ts: new Date().toISOString(),
-    ownerId: state.currentUser.uid
+    ownerId: owner.uid
   });
   if(document.getElementById('contactOverlay').classList.contains('active')){
     const c = state.contacts.find(x=>x.name===contactName);
@@ -1150,13 +1289,21 @@ async function quickTouch(contactName, channel){
 }
 function renderContacts(){
   const q = (document.getElementById('contactSearch')?.value || '').toLowerCase();
+  const sortMode = document.getElementById('contactSort')?.value || 'az';
   const tbody = document.getElementById('contactsTableBody');
   const isAdmin = state.currentUser && state.currentUser.role === 'admin';
-  const filtered = state.contacts.filter(c=>{
+  const contacts = scopedContacts();
+  let filtered = contacts.filter(c=>{
     if(!q) return true;
     return (c.name||'').toLowerCase().includes(q) || (c.phone||'').includes(q) || (c.occupation||'').toLowerCase().includes(q);
   });
-  document.getElementById('contactCountLabel').textContent = state.contacts.length;
+  filtered = [...filtered].sort((a,b)=>{
+    if(sortMode==='az') return (a.name||'').localeCompare(b.name||'');
+    if(sortMode==='za') return (b.name||'').localeCompare(a.name||'');
+    if(sortMode==='recent') return new Date(b.createdAt||0) - new Date(a.createdAt||0);
+    return 0;
+  });
+  document.getElementById('contactCountLabel').textContent = contacts.length;
   if(filtered.length===0){
     tbody.innerHTML = `<tr><td colspan="7" class="empty-note">No contacts match.</td></tr>`;
   } else {
@@ -1179,7 +1326,7 @@ function renderSourceBreakdown(){
   const el = document.getElementById('sourceBreakdown');
   if(!el) return;
   const counts = {};
-  state.messages.forEach(m=>{ counts[m.channel] = (counts[m.channel]||0) + 1; });
+  scopedMessages().forEach(m=>{ counts[m.channel] = (counts[m.channel]||0) + 1; });
   const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
   el.innerHTML = entries.length? entries.map(([ch,n])=>`
     <div class="glance-item" style="display:flex;justify-content:space-between;">
@@ -1188,19 +1335,20 @@ function renderSourceBreakdown(){
 }
 async function addMessageFromContacts(e){
   e.preventDefault();
+  const owner = effectiveOwner();
   await db.collection('messages').add({
     contact: document.getElementById('qc_contact').value.trim(),
     channel: document.getElementById('qc_channel').value,
     content: document.getElementById('qc_content').value.trim(),
     agenda: document.getElementById('qc_agenda').checked,
     ts: new Date().toISOString(),
-    ownerId: state.currentUser.uid
+    ownerId: owner.uid
   });
   e.target.reset();
   return false;
 }
 function renderDatalists(){
-  const opts = state.contacts.map(c=>`<option value="${escapeHtml(c.name)}">`).join('');
+  const opts = scopedContacts().map(c=>`<option value="${escapeHtml(c.name)}">`).join('');
   ['contactNamesList','contactNamesList2','contactNamesList3'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.innerHTML = opts;
@@ -1265,9 +1413,9 @@ function renderContactCard(id, editMode){
     return;
   }
 
-  const linkedTasks = state.tasks.filter(t=> t.contactName && t.contactName.toLowerCase()===c.name.toLowerCase());
-  const linkedAppts = state.appointments.filter(a=> a.client && a.client.toLowerCase()===c.name.toLowerCase());
-  const linkedMsgs = state.messages.filter(m=> m.contact && m.contact.toLowerCase()===c.name.toLowerCase());
+  const linkedTasks = scopedTasks().filter(t=> t.contactName && t.contactName.toLowerCase()===c.name.toLowerCase());
+  const linkedAppts = scopedAppointments().filter(a=> a.client && a.client.toLowerCase()===c.name.toLowerCase());
+  const linkedMsgs = scopedMessages().filter(m=> m.contact && m.contact.toLowerCase()===c.name.toLowerCase());
   const source = contactSource(c);
   const lastTouch = lastMessageAge(c);
 
@@ -1335,11 +1483,11 @@ async function deleteContact(id){
 
 /* ============ AT A GLANCE (draggable, auto-opens on contact card) ============ */
 function openGlanceForContact(c){
-  const relatedTasks = state.tasks.filter(t=>
+  const relatedTasks = scopedTasks().filter(t=>
     (t.contactName && t.contactName.toLowerCase()===c.name.toLowerCase())
   );
   const highImportance = sortByHierarchy(relatedTasks.filter(t=>!t.done));
-  const agendaMsgs = state.messages.filter(m=>m.contact && m.contact.toLowerCase()===c.name.toLowerCase() && m.agenda);
+  const agendaMsgs = scopedMessages().filter(m=>m.contact && m.contact.toLowerCase()===c.name.toLowerCase() && m.agenda);
 
   let html = '';
   if(highImportance.length===0 && agendaMsgs.length===0){
@@ -1392,14 +1540,15 @@ function closeGlance(){
 /* ============ APPOINTMENTS ============ */
 async function addAppointment(e){
   e.preventDefault();
+  const owner = effectiveOwner();
   await db.collection('appointments').add({
     client: document.getElementById('a_client').value.trim(),
     date: document.getElementById('a_date').value,
     time: document.getElementById('a_time').value,
     type: document.getElementById('a_type').value,
     notes: document.getElementById('a_notes').value.trim(),
-    ownerId: state.currentUser.uid,
-    ownerName: state.currentUser.name
+    ownerId: owner.uid,
+    ownerName: owner.name
   });
   e.target.reset();
   return false;
@@ -1409,7 +1558,7 @@ async function deleteAppointment(id){
 }
 function renderAppointments(){
   const tbody = document.getElementById('apptTableBody');
-  const sorted = [...state.appointments].sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
+  const sorted = [...scopedAppointments()].sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
   if(sorted.length===0){
     tbody.innerHTML = `<tr><td colspan="5" class="empty-note">No appointments logged yet.</td></tr>`;
   } else {
@@ -1428,13 +1577,14 @@ function renderAppointments(){
 /* ============ MESSAGES ============ */
 async function addMessage(e){
   e.preventDefault();
+  const owner = effectiveOwner();
   await db.collection('messages').add({
     contact: document.getElementById('m_contact').value.trim(),
     channel: document.getElementById('m_channel').value,
     content: document.getElementById('m_content').value.trim(),
     agenda: document.getElementById('m_agenda').checked,
     ts: new Date().toISOString(),
-    ownerId: state.currentUser.uid
+    ownerId: owner.uid
   });
   e.target.reset();
   return false;
@@ -1445,7 +1595,7 @@ async function deleteMessage(id){
 function renderMessages(){
   const filter = document.getElementById('msgChannelFilter')?.value || '';
   const list = document.getElementById('messagesList');
-  const filtered = state.messages.filter(m=> !filter || m.channel===filter);
+  const filtered = scopedMessages().filter(m=> !filter || m.channel===filter);
   if(filtered.length===0){
     list.innerHTML = `<div class="empty-note">No messages logged yet.</div>`;
   } else {
@@ -1466,18 +1616,19 @@ async function addTask(e){
   e.preventDefault();
   const assigneeUid = document.getElementById('t_assignee').value;
   const assigneeUser = state.users.find(u=>u.uid===assigneeUid);
+  const owner = effectiveOwner();
   await db.collection('tasks').add({
     title: document.getElementById('t_title').value.trim(),
     assignee: assigneeUid,
-    assigneeName: assigneeUser ? assigneeUser.name : state.currentUser.name,
+    assigneeName: assigneeUser ? assigneeUser.name : owner.name,
     priority: document.getElementById('t_priority').value,
     category: document.getElementById('t_category').value,
     contactName: document.getElementById('t_contact').value.trim(),
     due: document.getElementById('t_due').value,
     agenda: document.getElementById('t_agenda').checked,
     done: false,
-    ownerId: state.currentUser.uid,
-    ownerName: state.currentUser.name
+    ownerId: owner.uid,
+    ownerName: owner.name
   });
   e.target.reset();
   return false;
@@ -1492,7 +1643,7 @@ async function deleteTask(id){
 function renderTasks(){
   const userFilter = document.getElementById('taskUserFilter')?.value || '';
   const statusFilter = document.getElementById('taskStatusFilter')?.value || 'open';
-  let list = [...state.tasks];
+  let list = [...scopedTasks()];
   if(userFilter) list = list.filter(t=>t.assignee===userFilter);
   if(statusFilter==='open') list = list.filter(t=>!t.done);
   if(statusFilter==='done') list = list.filter(t=>t.done);
@@ -1537,8 +1688,10 @@ function renderTeam(){
     const high = open.filter(t=>t.priority==='High');
     const agenda = open.filter(t=>t.agenda);
     const done = mine.filter(t=>t.done);
+    const isSelf = u.uid === state.currentUser.uid;
+    const safeName = escapeHtml(u.name).replace(/'/g,"\\'");
     return `<tr>
-      <td>${escapeHtml(u.name)}${u.role==='admin'?' <span class="tag agenda">Admin</span>':''}</td>
+      <td>${isSelf ? escapeHtml(u.name)+' <span style="color:#999;font-size:11px;">(you)</span>' : `<button class="link-btn" onclick="confirmViewAs('${u.uid}','${safeName}')">${escapeHtml(u.name)}</button>`}${u.role==='admin'?' <span class="tag agenda">Admin</span>':''}</td>
       <td>${open.length}</td>
       <td>${high.length}</td>
       <td>${agenda.length}</td>
@@ -1549,7 +1702,9 @@ function renderTeam(){
 
 /* ============ DASHBOARD ============ */
 function renderColdList(){
-  const withMsgs = state.contacts.filter(c=> state.messages.some(m=>m.contact && m.contact.toLowerCase()===c.name.toLowerCase()));
+  const contacts = scopedContacts();
+  const messages = scopedMessages();
+  const withMsgs = contacts.filter(c=> messages.some(m=>m.contact && m.contact.toLowerCase()===c.name.toLowerCase()));
   const cold = withMsgs.map(c=>({c, age: lastMessageAge(c)}))
     .filter(x=>x.age.hours>=72)
     .sort((a,b)=>b.age.hours-a.age.hours);
@@ -1560,9 +1715,85 @@ function renderColdList(){
       <div class="gi-meta">Last touch via ${escapeHtml(age.channel)}</div>
     </div>`).join('') : '<div class="empty-note">Nothing going cold — board is warm.</div>';
 }
+/* ============ DASHBOARD TILE REORDERING ============
+   Uses Pointer Events (not native HTML5 drag-and-drop) so this works the same
+   way on touch phones as it does with a mouse — native drag-and-drop has poor
+   to nonexistent touch support on iOS Safari. Order is remembered per logged-in
+   user, per device, in localStorage — it's a display preference, not business
+   data, so it doesn't need to live in Firestore or sync across devices. */
+function tileOrderKey(){
+  return 'dashboardTileOrder_' + (state.currentUser ? state.currentUser.uid : 'anon');
+}
+function saveDashboardTileOrder(){
+  const container = document.getElementById('dashboardTiles');
+  if(!container) return;
+  const order = Array.from(container.children).map(el=>el.dataset.tileId);
+  localStorage.setItem(tileOrderKey(), JSON.stringify(order));
+}
+function applyDashboardTileOrder(){
+  const container = document.getElementById('dashboardTiles');
+  if(!container) return;
+  const saved = localStorage.getItem(tileOrderKey());
+  if(!saved) return;
+  try{
+    const order = JSON.parse(saved);
+    order.forEach(id=>{
+      const el = container.querySelector(`[data-tile-id="${id}"]`);
+      if(el) container.appendChild(el);
+    });
+  }catch(e){ /* ignore corrupt/old data, default order stands */ }
+}
+function initDashboardDragDrop(){
+  const container = document.getElementById('dashboardTiles');
+  if(!container || container.dataset.dndInit) return;
+  container.dataset.dndInit = '1';
+  let dragEl = null;
+
+  container.querySelectorAll('.tile-handle').forEach(handle=>{
+    handle.addEventListener('pointerdown', (e)=>{
+      const tile = handle.closest('.dash-tile');
+      if(!tile) return;
+      dragEl = tile;
+      tile.classList.add('dragging');
+      try{ handle.setPointerCapture(e.pointerId); }catch(err){}
+      e.preventDefault();
+    });
+  });
+
+  container.addEventListener('pointermove', (e)=>{
+    if(!dragEl) return;
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const target = el ? el.closest('.dash-tile') : null;
+    container.querySelectorAll('.drag-target').forEach(t=>t.classList.remove('drag-target'));
+    if(!target || target === dragEl) return;
+    target.classList.add('drag-target');
+    const rect = target.getBoundingClientRect();
+    const after = (e.clientY - rect.top) > rect.height / 2;
+    if(after){ target.after(dragEl); } else { target.before(dragEl); }
+  });
+
+  function endDrag(){
+    if(!dragEl) return;
+    dragEl.classList.remove('dragging');
+    container.querySelectorAll('.drag-target').forEach(t=>t.classList.remove('drag-target'));
+    dragEl = null;
+    saveDashboardTileOrder();
+  }
+  container.addEventListener('pointerup', endDrag);
+  container.addEventListener('pointercancel', endDrag);
+}
+
 function renderDashboard(){
+  const viewingName = (state.currentUser.role === 'admin' && state.viewAsUid)
+    ? (state.users.find(u=>u.uid===state.viewAsUid)?.name || 'Team Member')
+    : state.currentUser.name;
+  document.getElementById('welcomeTitle').textContent = 'Welcome, ' + viewingName;
   renderColdList();
-  const overdueTasks = sortByHierarchy(state.tasks.filter(t=>isOverdue(t.due, t.done)));
+  const tasks = scopedTasks();
+  const appointments = scopedAppointments();
+  const messages = scopedMessages();
+
+  const overdueTasks = sortByHierarchy(tasks.filter(t=>isOverdue(t.due, t.done)));
   const overdueEl = document.getElementById('overdueList');
   overdueEl.innerHTML = overdueTasks.length? overdueTasks.map(t=>`
     <div class="glance-item">
@@ -1575,7 +1806,7 @@ function renderDashboard(){
     </div>`).join('') : '<div class="empty-note">Nothing overdue. Clean board.</div>';
 
   const today = new Date(); today.setHours(0,0,0,0);
-  const upcoming = [...state.appointments]
+  const upcoming = [...appointments]
     .filter(a=> a.date && new Date(a.date) >= today)
     .sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time))
     .slice(0,8);
@@ -1585,14 +1816,14 @@ function renderDashboard(){
       <div class="gi-meta">${escapeHtml(a.date)} @ ${escapeHtml(a.time)}</div>
     </div>`).join('') : '<div class="empty-note">No upcoming appointments.</div>';
 
-  const agendaTasks = sortByHierarchy(state.tasks.filter(t=>t.agenda && !t.done)).slice(0,8);
+  const agendaTasks = sortByHierarchy(tasks.filter(t=>t.agenda && !t.done)).slice(0,8);
   document.getElementById('agendaTopList').innerHTML = agendaTasks.length? agendaTasks.map(t=>`
     <div class="glance-item">
       <div class="gi-title">${escapeHtml(t.title)} <span class="tag priority-${t.priority}">${t.priority}</span></div>
       <div class="gi-meta">Assigned: ${escapeHtml(t.assigneeName)} ${t.contactName? '&middot; '+escapeHtml(t.contactName):''}</div>
     </div>`).join('') : '<div class="empty-note">No agenda-forward tasks flagged.</div>';
 
-  const recentMsgs = [...state.messages].sort((a,b)=> new Date(b.ts)-new Date(a.ts)).slice(0,6);
+  const recentMsgs = [...messages].sort((a,b)=> new Date(b.ts)-new Date(a.ts)).slice(0,6);
   document.getElementById('recentMsgList').innerHTML = recentMsgs.length? recentMsgs.map(m=>`
     <div class="glance-item">
       <div class="gi-title">${escapeHtml(m.contact)} <span class="tag channel">${escapeHtml(m.channel)}</span>${m.agenda?' <span class="tag agenda">Agenda</span>':''}</div>
@@ -1610,15 +1841,17 @@ function jumpToContact(name){
 
 /* ============ STATS / AGENDA COUNT ============ */
 function updateStat(){
-  const agendaTasks = state.tasks.filter(t=>t.agenda && !t.done).length;
-  const agendaMsgs = state.messages.filter(m=>m.agenda).length;
+  const tasks = scopedTasks();
+  const messages = scopedMessages();
+  const agendaTasks = tasks.filter(t=>t.agenda && !t.done).length;
+  const agendaMsgs = messages.filter(m=>m.agenda).length;
   const totalAgenda = agendaTasks + agendaMsgs;
   document.getElementById('agendaCount').textContent = totalAgenda + ' agenda-forward item' + (totalAgenda===1?'':'s');
   document.getElementById('statAgenda').textContent = totalAgenda;
-  document.getElementById('statOverdue').textContent = state.tasks.filter(t=>isOverdue(t.due,t.done)).length;
+  document.getElementById('statOverdue').textContent = tasks.filter(t=>isOverdue(t.due,t.done)).length;
   const today = new Date(); today.setHours(0,0,0,0);
-  document.getElementById('statAppts').textContent = state.appointments.filter(a=>a.date && new Date(a.date)>=today).length;
-  document.getElementById('statContacts').textContent = state.contacts.length;
+  document.getElementById('statAppts').textContent = scopedAppointments().filter(a=>a.date && new Date(a.date)>=today).length;
+  document.getElementById('statContacts').textContent = scopedContacts().length;
 }
 
 document.getElementById('contactOverlay').addEventListener('click', e=>{
